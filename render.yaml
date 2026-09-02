@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: convertexe
+    runtime: docker
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: QPDF_PATH
+        value: /usr/bin/qpdf

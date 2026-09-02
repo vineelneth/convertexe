@@ -1,0 +1,212 @@
+import React, { useState, useRef, useCallback } from 'react';
+import axios from 'axios';
+import { ImagePlus, Download, RefreshCw, CheckCircle, X, GripVertical, Upload } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import * as exifr from 'exifr';
+import JobStatus from '../../components/JobStatus';
+import { useJobPoller } from '../../hooks/useJobPoller';
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function SortableItem({ item, index, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} className="relative bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="aspect-square overflow-hidden bg-gray-100">
+        <img src={item.preview} alt={item.file.name} className="w-full h-full object-cover" />
+      </div>
+      <div className="absolute top-1 left-1 w-6 h-6 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow">
+        {index + 1}
+      </div>
+      <button
+        onClick={() => onRemove(item.id)}
+        className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow"
+      >
+        <X size={12} />
+      </button>
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute bottom-1 right-1 w-6 h-6 bg-white/80 rounded flex items-center justify-center cursor-grab active:cursor-grabbing shadow"
+      >
+        <GripVertical size={14} className="text-gray-500" />
+      </div>
+      <div className="px-2 py-1.5">
+        <p className="text-xs text-gray-600 truncate">{item.file.name}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ImagesToPdf() {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [hadExif, setHadExif] = useState(false);
+  const [draggingOver, setDraggingOver] = useState(false);
+  const inputRef = useRef(null);
+  const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
+  const jobError = status === 'failed' ? (hookError || 'Conversion failed') : '';
+
+  const processNewFiles = useCallback(async (rawFiles) => {
+    const newItems = await Promise.all(Array.from(rawFiles).map(async (file) => {
+      const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9) + file.name;
+      const preview = URL.createObjectURL(file);
+      let exifDate = null;
+      try {
+        const exif = await exifr.parse(file, ['DateTimeOriginal']);
+        if (exif?.DateTimeOriginal) exifDate = new Date(exif.DateTimeOriginal);
+      } catch {}
+      return { id, file, preview, exifDate };
+    }));
+
+    setFiles(prev => {
+      const combined = [...prev, ...newItems];
+      const anyExif = combined.some(f => f.exifDate);
+      setHadExif(anyExif);
+      return combined.sort((a, b) => {
+        if (anyExif && a.exifDate && b.exifDate) return a.exifDate - b.exifDate;
+        if (anyExif && a.exifDate) return -1;
+        if (anyExif && b.exifDate) return 1;
+        return a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    });
+  }, []);
+
+  const handleFileInput = (e) => {
+    if (e.target.files.length) processNewFiles(e.target.files);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDraggingOver(false);
+    if (e.dataTransfer.files.length) processNewFiles(e.dataTransfer.files);
+  };
+
+  const handleRemove = (id) => {
+    setFiles(prev => {
+      const item = prev.find(f => f.id === id);
+      if (item) URL.revokeObjectURL(item.preview);
+      return prev.filter(f => f.id !== id);
+    });
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      setFiles(prev => {
+        const oldIndex = prev.findIndex(f => f.id === active.id);
+        const newIndex = prev.findIndex(f => f.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleConvert = async () => {
+    if (!files.length) return;
+    setLoading(true); setError('');
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f.file));
+    try {
+      const { data } = await axios.post('/api/pdf/images-to-pdf', formData);
+      startJob(data.jobId);
+    } catch (err) { setError(err.response?.data?.error || 'Upload failed.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = result.downloadUrl; a.download = result.filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  const handleReset = () => {
+    files.forEach(f => URL.revokeObjectURL(f.preview));
+    setFiles([]); setError(''); setHadExif(false); resetJob();
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><ImagePlus size={20} className="text-red-600" /></div>
+        <div><h1 className="text-2xl font-bold text-gray-900">Images to PDF</h1><p className="text-gray-500 text-sm">Combine multiple images into a single PDF</p></div>
+      </div>
+
+      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+
+      {result && status === 'completed' ? (
+        <div className="card">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
+            <div><p className="font-semibold text-gray-800">PDF created!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-gray-500 mb-1">PDF size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download PDF</button>
+            <button onClick={handleReset} className="btn-secondary flex-1 flex items-center justify-center gap-2"><RefreshCw size={16} /> Convert Another</button>
+          </div>
+        </div>
+      ) : (
+        <div className="card space-y-5">
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+            onDragLeave={() => setDraggingOver(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center py-8 gap-2
+              ${draggingOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'}`}
+          >
+            <Upload size={28} className={draggingOver ? 'text-indigo-600' : 'text-gray-400'} />
+            <p className="font-semibold text-gray-700">Drag & drop images here</p>
+            <p className="text-gray-400 text-sm">or <span className="text-indigo-600 font-medium">click to browse</span></p>
+            <p className="text-xs text-gray-400">JPG, PNG, WebP, AVIF, HEIC, GIF, BMP, TIFF, SVG</p>
+            <input ref={inputRef} type="file" multiple accept=".jpeg,.jpg,.png,.webp,.gif,.bmp,.tiff,.tif,.avif,.heic,.heif,.svg" className="hidden" onChange={handleFileInput} />
+          </div>
+
+          {files.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-700">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${hadExif ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {hadExif ? 'Auto-sorted by photo date (EXIF)' : 'Sorted by filename'}
+                </span>
+              </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={files.map(f => f.id)} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {files.map((item, index) => (
+                      <SortableItem key={item.id} item={item} index={index} onRemove={handleRemove} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+          )}
+
+          <JobStatus status={status} progress={progress} position={position} error={jobError} />
+
+          <button onClick={handleConvert} disabled={!files.length || isProcessing} className="btn-primary w-full flex items-center justify-center gap-2">
+            {loading ? <><RefreshCw size={16} className="animate-spin" /> Uploading...</>
+              : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing...</>
+              : <><ImagePlus size={16} /> Create PDF</>}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
