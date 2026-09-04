@@ -39,7 +39,7 @@ const uploadImages = multer({
   }
 });
 
-router.post('/images-to-pdf', handleUpload(uploadImages.array('files', 20)), asyncRoute(async (req, res) => {
+router.post('/images-to-pdf', handleUpload(uploadImages.array('files', 50)), asyncRoute(async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
   const job = await pdfQueue.add('images-to-pdf', { operation: 'images-to-pdf', imagePaths: req.files.map(f => f.path) });
   res.json({ jobId: 'pdf_' + job.id });

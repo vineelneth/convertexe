@@ -65,22 +65,53 @@ const pdfWorker = new Worker('pdf', async (job) => {
 
   if (operation === 'images-to-pdf') {
     const { imagePaths } = job.data;
+    if (!imagePaths || imagePaths.length === 0) throw new Error('No images provided');
+
     let totalInputSize = 0;
     for (const p of imagePaths) {
       if (fs.existsSync(p)) totalInputSize += fs.statSync(p).size;
     }
 
-    await job.updateProgress(10);
-    const pdfDoc = await PDFDocument.create();
+    await job.updateProgress(5);
 
-    for (let i = 0; i < imagePaths.length; i++) {
-      const p = imagePaths[i];
-      const imgBuf = await sharp(p).jpeg({ quality: 90 }).toBuffer();
-      const meta = await sharp(p).metadata();
+    // Encode all images to JPEG in parallel (4 at a time), single sharp call each.
+    // .rotate() auto-corrects EXIF orientation (phone photos).
+    const ENCODE_CONCURRENCY = 4;
+    const encoded = new Array(imagePaths.length);
+    let encodeIndex = 0;
+    let encodeCompleted = 0;
+
+    async function encodeWorker() {
+      while (encodeIndex < imagePaths.length) {
+        const i = encodeIndex++;
+        const p = imagePaths[i];
+        if (!fs.existsSync(p)) throw new Error(`Image file not found: ${path.basename(p)}`);
+        const { data: imgBuf, info } = await sharp(p)
+          .rotate()
+          .jpeg({ quality: 90 })
+          .toBuffer({ resolveWithObject: true });
+        encoded[i] = { imgBuf, width: info.width, height: info.height };
+        encodeCompleted++;
+        await job.updateProgress(5 + Math.floor(encodeCompleted / imagePaths.length * 60));
+      }
+    }
+
+    await Promise.all(
+      Array.from({ length: Math.min(ENCODE_CONCURRENCY, imagePaths.length) }, encodeWorker)
+    );
+
+    await job.updateProgress(65);
+
+    // Build PDF sequentially — pdf-lib is not safe for concurrent mutation.
+    // Null out each encode buffer after embedding to free memory sooner.
+    const pdfDoc = await PDFDocument.create();
+    for (let i = 0; i < encoded.length; i++) {
+      const { imgBuf, width, height } = encoded[i];
+      encoded[i] = null;
       const jpgImage = await pdfDoc.embedJpg(imgBuf);
-      const page = pdfDoc.addPage([meta.width, meta.height]);
-      page.drawImage(jpgImage, { x: 0, y: 0, width: meta.width, height: meta.height });
-      await job.updateProgress(10 + Math.floor((i + 1) / imagePaths.length * 80));
+      const page = pdfDoc.addPage([width, height]);
+      page.drawImage(jpgImage, { x: 0, y: 0, width, height });
+      await job.updateProgress(65 + Math.floor((i + 1) / encoded.length * 25));
     }
 
     const outFilename = outputName('images', null, 'pdf');
