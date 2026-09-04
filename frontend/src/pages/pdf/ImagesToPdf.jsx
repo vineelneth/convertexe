@@ -46,11 +46,51 @@ function SortableItem({ item, index, onRemove }) {
   );
 }
 
+const SORT_OPTIONS = [
+  { value: 'filename-asc',  label: 'Filename A → Z' },
+  { value: 'filename-desc', label: 'Filename Z → A' },
+  { value: 'exif-asc',      label: 'Photo date: oldest first', needsExif: true },
+  { value: 'exif-desc',     label: 'Photo date: newest first', needsExif: true },
+  { value: 'size-asc',      label: 'File size: smallest first' },
+  { value: 'size-desc',     label: 'File size: largest first' },
+];
+
+function applySort(items, mode) {
+  const sorted = [...items];
+  switch (mode) {
+    case 'filename-asc':
+      return sorted.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' }));
+    case 'filename-desc':
+      return sorted.sort((a, b) => b.file.name.localeCompare(a.file.name, undefined, { numeric: true, sensitivity: 'base' }));
+    case 'exif-asc':
+      return sorted.sort((a, b) => {
+        if (a.exifDate && b.exifDate) return a.exifDate - b.exifDate;
+        if (a.exifDate) return -1;
+        if (b.exifDate) return 1;
+        return a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    case 'exif-desc':
+      return sorted.sort((a, b) => {
+        if (a.exifDate && b.exifDate) return b.exifDate - a.exifDate;
+        if (a.exifDate) return -1;
+        if (b.exifDate) return 1;
+        return b.file.name.localeCompare(a.file.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    case 'size-asc':
+      return sorted.sort((a, b) => a.file.size - b.file.size);
+    case 'size-desc':
+      return sorted.sort((a, b) => b.file.size - a.file.size);
+    default:
+      return sorted;
+  }
+}
+
 export default function ImagesToPdf() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [hadExif, setHadExif] = useState(false);
+  const [hasExif, setHasExif] = useState(false);
+  const [sortMode, setSortMode] = useState('filename-asc');
   const [draggingOver, setDraggingOver] = useState(false);
   const inputRef = useRef(null);
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
@@ -75,13 +115,12 @@ export default function ImagesToPdf() {
     setFiles(prev => {
       const combined = [...prev, ...newItems];
       const anyExif = combined.some(f => f.exifDate);
-      setHadExif(anyExif);
-      return combined.sort((a, b) => {
-        if (anyExif && a.exifDate && b.exifDate) return a.exifDate - b.exifDate;
-        if (anyExif && a.exifDate) return -1;
-        if (anyExif && b.exifDate) return 1;
-        return a.file.name.localeCompare(b.file.name, undefined, { numeric: true, sensitivity: 'base' });
+      setHasExif(anyExif);
+      setSortMode(cur => {
+        const next = cur === 'filename-asc' && anyExif ? 'exif-asc' : cur;
+        return next;
       });
+      return combined;
     });
   }, []);
 
@@ -132,9 +171,14 @@ export default function ImagesToPdf() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
+  const handleSortChange = (mode) => {
+    setSortMode(mode);
+    setFiles(prev => applySort(prev, mode));
+  };
+
   const handleReset = () => {
     files.forEach(f => URL.revokeObjectURL(f.preview));
-    setFiles([]); setError(''); setHadExif(false); resetJob();
+    setFiles([]); setError(''); setHasExif(false); setSortMode('filename-asc'); resetJob();
   };
 
   return (
@@ -180,11 +224,22 @@ export default function ImagesToPdf() {
 
           {files.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-gray-700">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${hadExif ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {hadExif ? 'Auto-sorted by photo date (EXIF)' : 'Sorted by filename'}
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-700 shrink-0">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 shrink-0">Sort by</label>
+                  <select
+                    value={sortMode}
+                    onChange={e => handleSortChange(e.target.value)}
+                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    {SORT_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value} disabled={opt.needsExif && !hasExif}>
+                        {opt.label}{opt.needsExif && !hasExif ? ' (no EXIF)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={files.map(f => f.id)} strategy={rectSortingStrategy}>
