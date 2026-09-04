@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
-import { ImagePlus, Download, RefreshCw, CheckCircle, X, GripVertical, Upload } from 'lucide-react';
+import { ImagePlus, Download, RefreshCw, CheckCircle, X, GripVertical, Upload, ChevronDown, Check } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -13,6 +13,55 @@ function formatBytes(bytes) {
   const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function SortDropdown({ value, onChange, options, hasExif }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <span>{selected?.label}</span>
+        <ChevronDown size={12} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px]">
+          {options.map(opt => {
+            const disabled = opt.needsExif && !hasExif;
+            const active = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={disabled}
+                onClick={() => { if (!disabled) { onChange(opt.value); setOpen(false); } }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left transition-colors
+                  ${disabled ? 'text-gray-300 cursor-not-allowed' : active ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+              >
+                <span>{opt.label}{disabled ? ' (no EXIF)' : ''}</span>
+                {active && <Check size={12} className="text-indigo-600 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function SortableItem({ item, index, onRemove }) {
@@ -228,17 +277,12 @@ export default function ImagesToPdf() {
                 <p className="text-sm font-semibold text-gray-700 shrink-0">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-gray-500 shrink-0">Sort by</label>
-                  <select
+                  <SortDropdown
                     value={sortMode}
-                    onChange={e => handleSortChange(e.target.value)}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  >
-                    {SORT_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value} disabled={opt.needsExif && !hasExif}>
-                        {opt.label}{opt.needsExif && !hasExif ? ' (no EXIF)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleSortChange}
+                    options={SORT_OPTIONS}
+                    hasExif={hasExif}
+                  />
                 </div>
               </div>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
