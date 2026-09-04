@@ -88,7 +88,8 @@ const pdfWorker = new Worker('pdf', async (job) => {
         if (!fs.existsSync(p)) throw new Error(`Image file not found: ${path.basename(p)}`);
         const { data: imgBuf, info } = await sharp(p)
           .rotate()
-          .jpeg({ quality: 90 })
+          .resize({ width: 2500, height: 2500, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
           .toBuffer({ resolveWithObject: true });
         encoded[i] = { imgBuf, width: info.width, height: info.height };
         encodeCompleted++;
