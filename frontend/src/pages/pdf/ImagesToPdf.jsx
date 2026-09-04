@@ -96,12 +96,14 @@ function SortableItem({ item, index, onRemove }) {
 }
 
 const SORT_OPTIONS = [
-  { value: 'filename-asc',  label: 'Filename A → Z' },
-  { value: 'filename-desc', label: 'Filename Z → A' },
-  { value: 'exif-asc',      label: 'Photo date: oldest first', needsExif: true },
-  { value: 'exif-desc',     label: 'Photo date: newest first', needsExif: true },
-  { value: 'size-asc',      label: 'File size: smallest first' },
-  { value: 'size-desc',     label: 'File size: largest first' },
+  { value: 'filename-asc',   label: 'Filename A → Z' },
+  { value: 'filename-desc',  label: 'Filename Z → A' },
+  { value: 'exif-asc',       label: 'Photo date: oldest first',    needsExif: true },
+  { value: 'exif-desc',      label: 'Photo date: newest first',    needsExif: true },
+  { value: 'modified-asc',   label: 'Date modified: oldest first' },
+  { value: 'modified-desc',  label: 'Date modified: newest first' },
+  { value: 'size-asc',       label: 'File size: smallest first' },
+  { value: 'size-desc',      label: 'File size: largest first' },
 ];
 
 function applySort(items, mode) {
@@ -125,6 +127,10 @@ function applySort(items, mode) {
         if (b.exifDate) return 1;
         return b.file.name.localeCompare(a.file.name, undefined, { numeric: true, sensitivity: 'base' });
       });
+    case 'modified-asc':
+      return sorted.sort((a, b) => a.file.lastModified - b.file.lastModified);
+    case 'modified-desc':
+      return sorted.sort((a, b) => b.file.lastModified - a.file.lastModified);
     case 'size-asc':
       return sorted.sort((a, b) => a.file.size - b.file.size);
     case 'size-desc':
