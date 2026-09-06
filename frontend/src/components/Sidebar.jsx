@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, Image, Minimize2, Maximize2, RotateCw, Contrast,
-  Music, Volume2, X, Zap,
+  Music, Volume2, X, Zap, ScanLine,
   ImagePlus, FilePlus2, Scissors, Trash2, PackageOpen, Lock, PenLine, FileImage
 } from 'lucide-react';
 
@@ -28,6 +28,12 @@ const navSections = [
     items: [
       { to: '/audio/convert',  label: 'Audio Converter',  icon: Music },
       { to: '/audio/compress', label: 'Audio Compressor', icon: Volume2 }
+    ]
+  },
+  {
+    label: 'Scanner',
+    items: [
+      { to: '/scanner', label: 'Document Scanner', icon: ScanLine }
     ]
   },
   {

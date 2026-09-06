@@ -22,6 +22,7 @@ import ProtectPdf from './pages/pdf/ProtectPdf';
 import WatermarkPdf from './pages/pdf/WatermarkPdf';
 import PdfToImages from './pages/pdf/PdfToImages';
 import UnlockPdf from './pages/pdf/UnlockPdf';
+import DocumentScanner from './pages/scanner/DocumentScanner';
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/pdf/watermark" element={<WatermarkPdf />} />
         <Route path="/pdf/to-images" element={<PdfToImages />} />
         <Route path="/pdf/unlock" element={<UnlockPdf />} />
+        <Route path="/scanner" element={<DocumentScanner />} />
       </Routes>
     </Layout>
   );

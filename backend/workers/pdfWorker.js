@@ -390,11 +390,55 @@ const pdfWorker = new Worker('pdf', async (job) => {
     return { pages, pageCount };
   }
 
+  if (operation === 'scan') {
+    const { imagePath, options } = job.data;
+    if (!fs.existsSync(imagePath)) throw new Error('Image not found');
+    const originalSize = fs.statSync(imagePath).size;
+    const { mode = 'bw', format = 'pdf' } = options;
+
+    await job.updateProgress(20);
+
+    let pipeline = sharp(imagePath).rotate();
+    if (mode === 'bw') {
+      pipeline = pipeline.grayscale().normalise().threshold(128);
+    } else if (mode === 'grayscale') {
+      pipeline = pipeline.grayscale().normalise().sharpen();
+    } else {
+      pipeline = pipeline.normalise().sharpen();
+    }
+
+    await job.updateProgress(60);
+
+    const uid = Math.random().toString(36).substr(2, 5);
+    let outFilename, outPath;
+
+    if (format === 'pdf') {
+      const { data: imgBuf, info } = await pipeline.jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      await job.updateProgress(80);
+      const pdfDoc = await PDFDocument.create();
+      const jpgImage = await pdfDoc.embedJpg(imgBuf);
+      const page = pdfDoc.addPage([info.width, info.height]);
+      page.drawImage(jpgImage, { x: 0, y: 0, width: info.width, height: info.height });
+      outFilename = `scan_${Date.now()}_${uid}.pdf`;
+      outPath = path.join(uploadsDir, outFilename);
+      fs.writeFileSync(outPath, await pdfDoc.save());
+    } else {
+      outFilename = `scan_${Date.now()}_${uid}.jpg`;
+      outPath = path.join(uploadsDir, outFilename);
+      await pipeline.jpeg({ quality: 92 }).toFile(outPath);
+    }
+
+    fs.unlink(imagePath, () => {});
+    await job.updateProgress(100);
+    return formatResult(outFilename, outPath, originalSize);
+  }
+
   throw new Error(`Unknown operation: ${operation}`);
 }, { concurrency: 4 });
 
 pdfWorker.on('failed', (job, err) => {
   if (job?.data?.inputPath) try { fs.unlink(job.data.inputPath, () => {}); } catch {}
+  if (job?.data?.imagePath) try { fs.unlink(job.data.imagePath, () => {}); } catch {}
   if (job?.data?.imagePaths) job.data.imagePaths.forEach(p => { try { fs.unlink(p, () => {}); } catch {} });
   if (job?.data?.pdfPaths) job.data.pdfPaths.forEach(p => { try { fs.unlink(p, () => {}); } catch {} });
   console.error(`[pdf] job ${job?.id} failed:`, err.message);
