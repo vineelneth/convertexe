@@ -101,12 +101,12 @@ function warpCanvas(srcCanvas, corners) {
 }
 
 // ─── Auto corner + edge detection ────────────────────────────────────────────
-// Algorithm: grayscale → double box-blur → Sobel edges → row/col projection
-// → "first dense edge line from outside" for each side → corner refinement
+// Strategy: heavy blur to smooth text → paper brightness mask → boundary scan
+// → Sobel edge refinement for precise corner placement even on tilted docs
 
 function detectCorners(imgCanvas) {
   const iW = imgCanvas.width, iH = imgCanvas.height;
-  const PROC_MAX = 500;
+  const PROC_MAX = 600;
   const scale = Math.min(PROC_MAX / iW, PROC_MAX / iH, 1);
   const pW = Math.round(iW * scale), pH = Math.round(iH * scale);
 
@@ -119,15 +119,15 @@ function detectCorners(imgCanvas) {
   // Grayscale
   const gray = new Float32Array(pW * pH);
   for (let i = 0; i < pW * pH; i++) {
-    gray[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
+    gray[i] = 0.299 * px[i*4] + 0.587 * px[i*4+1] + 0.114 * px[i*4+2];
   }
 
-  // Double 3×3 box-blur (≈ 5×5 Gaussian) for better noise removal
-  function boxBlur3(src, w, h) {
+  // 3×3 weighted box blur
+  function boxBlur(src, w, h) {
     const dst = new Float32Array(w * h);
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        dst[y * w + x] = (
+    for (let y = 1; y < h-1; y++) {
+      for (let x = 1; x < w-1; x++) {
+        dst[y*w+x] = (
           src[(y-1)*w+(x-1)] + 2*src[(y-1)*w+x] + src[(y-1)*w+(x+1)] +
           2*src[y*w+(x-1)]   + 4*src[y*w+x]     + 2*src[y*w+(x+1)] +
           src[(y+1)*w+(x-1)] + 2*src[(y+1)*w+x] + src[(y+1)*w+(x+1)]
@@ -136,83 +136,87 @@ function detectCorners(imgCanvas) {
     }
     return dst;
   }
-  const blur = boxBlur3(boxBlur3(gray, pW, pH), pW, pH);
 
-  // Sobel edge magnitude
+  // Heavy blur (8 passes) → smooths text, leaving only large-area brightness.
+  // Paper areas stay bright, dark backgrounds stay dark.
+  let heavy = gray;
+  for (let i = 0; i < 8; i++) heavy = boxBlur(heavy, pW, pH);
+
+  // Adaptive paper threshold: 65% of 90th-percentile brightness.
+  // Works under varying lighting conditions without a fixed value.
+  const sorted = Array.from(heavy).sort((a, b) => a - b);
+  const p90 = sorted[Math.floor(sorted.length * 0.90)];
+  const paperThresh = Math.max(60, p90 * 0.65);
+
+  const paper = new Uint8Array(pW * pH);
+  for (let i = 0; i < pW * pH; i++) paper[i] = heavy[i] >= paperThresh ? 1 : 0;
+
+  // Row / column paper-pixel fractions (skip 2% border to avoid vignetting)
+  const padX = Math.max(2, Math.floor(pW * 0.02));
+  const padY = Math.max(2, Math.floor(pH * 0.02));
+  const x0 = padX, x1 = pW - padX, y0 = padY, y1 = pH - padY;
+  const rW = x1 - x0, rH = y1 - y0;
+
+  const rowFrac = new Float32Array(pH);
+  for (let y = y0; y < y1; y++) {
+    let cnt = 0;
+    for (let x = x0; x < x1; x++) cnt += paper[y*pW+x];
+    rowFrac[y] = cnt / rW;
+  }
+  const colFrac = new Float32Array(pW);
+  for (let x = x0; x < x1; x++) {
+    let cnt = 0;
+    for (let y = y0; y < y1; y++) cnt += paper[y*pW+x];
+    colFrac[x] = cnt / rH;
+  }
+
+  // Scan inward from each side; first row/col with ≥40% paper pixels = document edge
+  const MIN_FRAC = 0.40;
+  let topY = Math.floor(pH * 0.06);
+  for (let y = y0; y < pH * 0.55; y++) { if (rowFrac[y] >= MIN_FRAC) { topY = y; break; } }
+  let botY = Math.floor(pH * 0.94);
+  for (let y = y1-1; y >= pH * 0.45; y--) { if (rowFrac[y] >= MIN_FRAC) { botY = y; break; } }
+  let leftX = Math.floor(pW * 0.06);
+  for (let x = x0; x < pW * 0.55; x++) { if (colFrac[x] >= MIN_FRAC) { leftX = x; break; } }
+  let rightX = Math.floor(pW * 0.94);
+  for (let x = x1-1; x >= pW * 0.45; x--) { if (colFrac[x] >= MIN_FRAC) { rightX = x; break; } }
+
+  // Sanity: if bounds too narrow, fall back to generous inset
+  if (rightX - leftX < pW * 0.20 || botY - topY < pH * 0.20) {
+    const m = 0.05;
+    return [
+      {x: iW*m, y: iH*m}, {x: iW*(1-m), y: iH*m},
+      {x: iW*(1-m), y: iH*(1-m)}, {x: iW*m, y: iH*(1-m)},
+    ];
+  }
+
+  // Light Sobel on moderately blurred image for sub-pixel corner refinement.
+  // Handles tilted documents — the actual corner pixel is near but not exactly
+  // at the axis-intersection estimated above.
+  let lb = boxBlur(boxBlur(gray, pW, pH), pW, pH);
   const edge = new Float32Array(pW * pH);
   let maxE = 1;
-  for (let y = 1; y < pH - 1; y++) {
-    for (let x = 1; x < pW - 1; x++) {
-      const gx = -blur[(y-1)*pW+(x-1)] + blur[(y-1)*pW+(x+1)]
-        - 2*blur[y*pW+(x-1)] + 2*blur[y*pW+(x+1)]
-        - blur[(y+1)*pW+(x-1)] + blur[(y+1)*pW+(x+1)];
-      const gy = blur[(y-1)*pW+(x-1)] + 2*blur[(y-1)*pW+x] + blur[(y-1)*pW+(x+1)]
-        - blur[(y+1)*pW+(x-1)] - 2*blur[(y+1)*pW+x] - blur[(y+1)*pW+(x+1)];
+  for (let y = 1; y < pH-1; y++) {
+    for (let x = 1; x < pW-1; x++) {
+      const gx = -lb[(y-1)*pW+(x-1)] + lb[(y-1)*pW+(x+1)] - 2*lb[y*pW+(x-1)] + 2*lb[y*pW+(x+1)] - lb[(y+1)*pW+(x-1)] + lb[(y+1)*pW+(x+1)];
+      const gy =  lb[(y-1)*pW+(x-1)] + 2*lb[(y-1)*pW+x]  + lb[(y-1)*pW+(x+1)] - lb[(y+1)*pW+(x-1)] - 2*lb[(y+1)*pW+x] - lb[(y+1)*pW+(x+1)];
       edge[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
       if (edge[y*pW+x] > maxE) maxE = edge[y*pW+x];
     }
   }
+  const eThresh = maxE * 0.10;
 
-  const thresh = maxE * 0.12;
-  const pad = 0.04; // ignore outer 4% border (camera vignette / frame)
-
-  // Row & column edge-count projections
-  const rowCount = new Float32Array(pH);
-  const colCount = new Float32Array(pW);
-  const x0 = Math.floor(pW*pad), x1 = Math.ceil(pW*(1-pad));
-  const y0 = Math.floor(pH*pad), y1 = Math.ceil(pH*(1-pad));
-  for (let y = y0; y < y1; y++) {
-    for (let x = x0; x < x1; x++) {
-      if (edge[y*pW+x] > thresh) { rowCount[y]++; colCount[x]++; }
-    }
-  }
-
-  // "First dense line from outside" — document border spans ≥ 18% of dimension
-  const rowMin = (x1 - x0) * 0.18;
-  const colMin = (y1 - y0) * 0.18;
-  const half = 0.5;
-
-  let topY = Math.floor(pH * 0.08);
-  for (let y = y0; y < pH * half; y++) {
-    if (rowCount[y] >= rowMin) { topY = y; break; }
-  }
-  let botY = Math.floor(pH * 0.92);
-  for (let y = y1 - 1; y >= pH * half; y--) {
-    if (rowCount[y] >= rowMin) { botY = y; break; }
-  }
-  let leftX = Math.floor(pW * 0.08);
-  for (let x = x0; x < pW * half; x++) {
-    if (colCount[x] >= colMin) { leftX = x; break; }
-  }
-  let rightX = Math.floor(pW * 0.92);
-  for (let x = x1 - 1; x >= pW * half; x--) {
-    if (colCount[x] >= colMin) { rightX = x; break; }
-  }
-
-  // Sanity check — if detected region is too small, use generous defaults
-  if (rightX - leftX < pW * 0.25 || botY - topY < pH * 0.25) {
-    const m = 0.06;
-    return [
-      { x: iW * m,       y: iH * m       },
-      { x: iW * (1 - m), y: iH * m       },
-      { x: iW * (1 - m), y: iH * (1 - m) },
-      { x: iW * m,       y: iH * (1 - m) },
-    ];
-  }
-
-  // Corner refinement: near each axis intersection, find closest strong edge pixel
-  // to handle document tilt (the border lines may not be perfectly axis-aligned)
-  const searchR = Math.floor(Math.min(pW, pH) * 0.1);
+  const searchR = Math.floor(Math.min(pW, pH) * 0.09);
   function refineCorner(cx, cy, dirX, dirY) {
-    let best = { x: cx, y: cy }, bestScore = -Infinity;
+    let best = {x: cx, y: cy}, bestScore = -Infinity;
     for (let dy = -searchR; dy <= searchR; dy++) {
       for (let dx = -searchR; dx <= searchR; dx++) {
-        const nx = cx + dx, ny = cy + dy;
+        const nx = cx+dx, ny = cy+dy;
         if (nx < 0 || ny < 0 || nx >= pW || ny >= pH) continue;
-        if (edge[ny*pW+nx] < thresh) continue;
-        // Prefer edge pixels in the outward corner direction, penalise distance
-        const score = dx * dirX + dy * dirY - (dx*dx + dy*dy) * 0.015;
-        if (score > bestScore) { bestScore = score; best = { x: nx, y: ny }; }
+        if (edge[ny*pW+nx] < eThresh) continue;
+        // Score: outward corner direction weighted over distance penalty
+        const score = dx*dirX + dy*dirY - (dx*dx + dy*dy) * 0.018;
+        if (score > bestScore) { bestScore = score; best = {x: nx, y: ny}; }
       }
     }
     return best;
@@ -225,10 +229,10 @@ function detectCorners(imgCanvas) {
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   return [
-    { x: clamp(tl.x / scale, 0, iW), y: clamp(tl.y / scale, 0, iH) },
-    { x: clamp(tr.x / scale, 0, iW), y: clamp(tr.y / scale, 0, iH) },
-    { x: clamp(br.x / scale, 0, iW), y: clamp(br.y / scale, 0, iH) },
-    { x: clamp(bl.x / scale, 0, iW), y: clamp(bl.y / scale, 0, iH) },
+    {x: clamp(tl.x/scale, 0, iW), y: clamp(tl.y/scale, 0, iH)},
+    {x: clamp(tr.x/scale, 0, iW), y: clamp(tr.y/scale, 0, iH)},
+    {x: clamp(br.x/scale, 0, iW), y: clamp(br.y/scale, 0, iH)},
+    {x: clamp(bl.x/scale, 0, iW), y: clamp(bl.y/scale, 0, iH)},
   ];
 }
 
@@ -465,7 +469,7 @@ export default function DocumentScanner() {
     setLoading(true); setError(''); resetJob();
     try {
       const warped = warpCanvas(imageCanvas, corners);
-      const blob = await new Promise(res => warped.toBlob(res, 'image/jpeg', 0.92));
+      const blob = await new Promise(res => warped.toBlob(res, 'image/jpeg', 0.95));
       const formData = new FormData();
       formData.append('image', blob, 'scan.jpg');
       formData.append('mode', mode);

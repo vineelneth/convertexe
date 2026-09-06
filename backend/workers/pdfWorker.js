@@ -403,27 +403,30 @@ const pdfWorker = new Worker('pdf', async (job) => {
     let imgBuf, imgWidth, imgHeight;
 
     if (mode === 'bw') {
-      // Adaptive threshold: each pixel compared to its local average (large blur).
-      // Prevents shadows from turning the whole area black (global threshold problem).
-      const { data: grayRaw, info: gi } = await sharp(imagePath)
-        .rotate().grayscale().raw().toBuffer({ resolveWithObject: true });
+      // Sharpen first so text edges are crisp before thresholding.
+      // Adaptive threshold: each pixel vs local blur average — shadows don't go all-black.
+      const { data: sharpRaw, info: gi } = await sharp(imagePath)
+        .rotate().grayscale().normalise().sharpen({ sigma: 1.0, m1: 1.5, m2: 20 })
+        .raw().toBuffer({ resolveWithObject: true });
       const blurSigma = Math.max(15, Math.min(60, Math.round(gi.width * 0.03)));
-      const { data: blurRaw } = await sharp(grayRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
+      const { data: blurRaw } = await sharp(sharpRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
         .blur(blurSigma).raw().toBuffer({ resolveWithObject: true });
-      const bwRaw = Buffer.alloc(grayRaw.length);
-      for (let i = 0; i < grayRaw.length; i++) {
-        bwRaw[i] = grayRaw[i] >= blurRaw[i] * 0.84 ? 255 : 0;
+      const bwRaw = Buffer.alloc(sharpRaw.length);
+      for (let i = 0; i < sharpRaw.length; i++) {
+        bwRaw[i] = sharpRaw[i] >= blurRaw[i] * 0.80 ? 255 : 0;
       }
       const result = await sharp(bwRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
-        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+        .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
       imgBuf = result.data; imgWidth = gi.width; imgHeight = gi.height;
     } else if (mode === 'grayscale') {
-      const { data, info } = await sharp(imagePath).rotate().grayscale().normalise().sharpen()
-        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      const { data, info } = await sharp(imagePath).rotate().grayscale().normalise()
+        .sharpen({ sigma: 0.8, m1: 0.5, m2: 5 })
+        .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
       imgBuf = data; imgWidth = info.width; imgHeight = info.height;
     } else {
-      const { data, info } = await sharp(imagePath).rotate().normalise().sharpen()
-        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      const { data, info } = await sharp(imagePath).rotate().normalise()
+        .modulate({ saturation: 1.1 }).sharpen({ sigma: 0.8, m1: 0.5, m2: 5 })
+        .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
       imgBuf = data; imgWidth = info.width; imgHeight = info.height;
     }
 
