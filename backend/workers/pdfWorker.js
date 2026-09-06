@@ -398,34 +398,50 @@ const pdfWorker = new Worker('pdf', async (job) => {
 
     await job.updateProgress(20);
 
-    let pipeline = sharp(imagePath).rotate();
-    if (mode === 'bw') {
-      pipeline = pipeline.grayscale().normalise().threshold(128);
-    } else if (mode === 'grayscale') {
-      pipeline = pipeline.grayscale().normalise().sharpen();
-    } else {
-      pipeline = pipeline.normalise().sharpen();
-    }
-
-    await job.updateProgress(60);
-
     const uid = Math.random().toString(36).substr(2, 5);
     let outFilename, outPath;
+    let imgBuf, imgWidth, imgHeight;
+
+    if (mode === 'bw') {
+      // Adaptive threshold: each pixel compared to its local average (large blur).
+      // Prevents shadows from turning the whole area black (global threshold problem).
+      const { data: grayRaw, info: gi } = await sharp(imagePath)
+        .rotate().grayscale().raw().toBuffer({ resolveWithObject: true });
+      const blurSigma = Math.max(15, Math.min(60, Math.round(gi.width * 0.03)));
+      const { data: blurRaw } = await sharp(grayRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
+        .blur(blurSigma).raw().toBuffer({ resolveWithObject: true });
+      const bwRaw = Buffer.alloc(grayRaw.length);
+      for (let i = 0; i < grayRaw.length; i++) {
+        bwRaw[i] = grayRaw[i] >= blurRaw[i] * 0.84 ? 255 : 0;
+      }
+      const result = await sharp(bwRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
+        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      imgBuf = result.data; imgWidth = gi.width; imgHeight = gi.height;
+    } else if (mode === 'grayscale') {
+      const { data, info } = await sharp(imagePath).rotate().grayscale().normalise().sharpen()
+        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      imgBuf = data; imgWidth = info.width; imgHeight = info.height;
+    } else {
+      const { data, info } = await sharp(imagePath).rotate().normalise().sharpen()
+        .jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
+      imgBuf = data; imgWidth = info.width; imgHeight = info.height;
+    }
+
+    await job.updateProgress(70);
 
     if (format === 'pdf') {
-      const { data: imgBuf, info } = await pipeline.jpeg({ quality: 92 }).toBuffer({ resolveWithObject: true });
-      await job.updateProgress(80);
       const pdfDoc = await PDFDocument.create();
       const jpgImage = await pdfDoc.embedJpg(imgBuf);
-      const page = pdfDoc.addPage([info.width, info.height]);
-      page.drawImage(jpgImage, { x: 0, y: 0, width: info.width, height: info.height });
+      const page = pdfDoc.addPage([imgWidth, imgHeight]);
+      page.drawImage(jpgImage, { x: 0, y: 0, width: imgWidth, height: imgHeight });
       outFilename = `scan_${Date.now()}_${uid}.pdf`;
       outPath = path.join(uploadsDir, outFilename);
+      await job.updateProgress(90);
       fs.writeFileSync(outPath, await pdfDoc.save());
     } else {
       outFilename = `scan_${Date.now()}_${uid}.jpg`;
       outPath = path.join(uploadsDir, outFilename);
-      await pipeline.jpeg({ quality: 92 }).toFile(outPath);
+      fs.writeFileSync(outPath, imgBuf);
     }
 
     fs.unlink(imagePath, () => {});

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan, Crosshair } from 'lucide-react';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
@@ -100,12 +100,13 @@ function warpCanvas(srcCanvas, corners) {
   return out;
 }
 
-// ─── Auto corner detection ────────────────────────────────────────────────────
-// Grayscale → Gaussian blur → Sobel edges → find extreme-diagonal edge pixels
+// ─── Auto corner + edge detection ────────────────────────────────────────────
+// Algorithm: grayscale → double box-blur → Sobel edges → row/col projection
+// → "first dense edge line from outside" for each side → corner refinement
 
 function detectCorners(imgCanvas) {
   const iW = imgCanvas.width, iH = imgCanvas.height;
-  const PROC_MAX = 400;
+  const PROC_MAX = 500;
   const scale = Math.min(PROC_MAX / iW, PROC_MAX / iH, 1);
   const pW = Math.round(iW * scale), pH = Math.round(iH * scale);
 
@@ -115,53 +116,112 @@ function detectCorners(imgCanvas) {
   tctx.drawImage(imgCanvas, 0, 0, pW, pH);
   const { data: px } = tctx.getImageData(0, 0, pW, pH);
 
+  // Grayscale
   const gray = new Float32Array(pW * pH);
   for (let i = 0; i < pW * pH; i++) {
     gray[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
   }
 
-  const blur = new Float32Array(pW * pH);
-  for (let y = 1; y < pH - 1; y++) {
-    for (let x = 1; x < pW - 1; x++) {
-      blur[y * pW + x] = (
-        gray[(y - 1) * pW + (x - 1)] + 2 * gray[(y - 1) * pW + x] + gray[(y - 1) * pW + (x + 1)] +
-        2 * gray[y * pW + (x - 1)] + 4 * gray[y * pW + x] + 2 * gray[y * pW + (x + 1)] +
-        gray[(y + 1) * pW + (x - 1)] + 2 * gray[(y + 1) * pW + x] + gray[(y + 1) * pW + (x + 1)]
-      ) / 16;
+  // Double 3×3 box-blur (≈ 5×5 Gaussian) for better noise removal
+  function boxBlur3(src, w, h) {
+    const dst = new Float32Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        dst[y * w + x] = (
+          src[(y-1)*w+(x-1)] + 2*src[(y-1)*w+x] + src[(y-1)*w+(x+1)] +
+          2*src[y*w+(x-1)]   + 4*src[y*w+x]     + 2*src[y*w+(x+1)] +
+          src[(y+1)*w+(x-1)] + 2*src[(y+1)*w+x] + src[(y+1)*w+(x+1)]
+        ) / 16;
+      }
     }
+    return dst;
   }
+  const blur = boxBlur3(boxBlur3(gray, pW, pH), pW, pH);
 
+  // Sobel edge magnitude
   const edge = new Float32Array(pW * pH);
   let maxE = 1;
   for (let y = 1; y < pH - 1; y++) {
     for (let x = 1; x < pW - 1; x++) {
-      const gx = -blur[(y - 1) * pW + (x - 1)] + blur[(y - 1) * pW + (x + 1)]
-        - 2 * blur[y * pW + (x - 1)] + 2 * blur[y * pW + (x + 1)]
-        - blur[(y + 1) * pW + (x - 1)] + blur[(y + 1) * pW + (x + 1)];
-      const gy = blur[(y - 1) * pW + (x - 1)] + 2 * blur[(y - 1) * pW + x] + blur[(y - 1) * pW + (x + 1)]
-        - blur[(y + 1) * pW + (x - 1)] - 2 * blur[(y + 1) * pW + x] - blur[(y + 1) * pW + (x + 1)];
-      edge[y * pW + x] = Math.sqrt(gx * gx + gy * gy);
-      if (edge[y * pW + x] > maxE) maxE = edge[y * pW + x];
+      const gx = -blur[(y-1)*pW+(x-1)] + blur[(y-1)*pW+(x+1)]
+        - 2*blur[y*pW+(x-1)] + 2*blur[y*pW+(x+1)]
+        - blur[(y+1)*pW+(x-1)] + blur[(y+1)*pW+(x+1)];
+      const gy = blur[(y-1)*pW+(x-1)] + 2*blur[(y-1)*pW+x] + blur[(y-1)*pW+(x+1)]
+        - blur[(y+1)*pW+(x-1)] - 2*blur[(y+1)*pW+x] - blur[(y+1)*pW+(x+1)];
+      edge[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
+      if (edge[y*pW+x] > maxE) maxE = edge[y*pW+x];
     }
   }
 
-  const thresh = maxE * 0.15;
-  const mx = Math.floor(pW * 0.04), my = Math.floor(pH * 0.04);
+  const thresh = maxE * 0.12;
+  const pad = 0.04; // ignore outer 4% border (camera vignette / frame)
 
-  let tlS = Infinity, trS = Infinity, brS = Infinity, blS = Infinity;
-  let tl = { x: pW * 0.1, y: pH * 0.1 }, tr = { x: pW * 0.9, y: pH * 0.1 };
-  let br = { x: pW * 0.9, y: pH * 0.9 }, bl = { x: pW * 0.1, y: pH * 0.9 };
-
-  for (let y = my; y < pH - my; y++) {
-    for (let x = mx; x < pW - mx; x++) {
-      if (edge[y * pW + x] < thresh) continue;
-      const s1 = x + y, s2 = (pW - x) + y, s3 = (pW - x) + (pH - y), s4 = x + (pH - y);
-      if (s1 < tlS) { tlS = s1; tl = { x, y }; }
-      if (s2 < trS) { trS = s2; tr = { x, y }; }
-      if (s3 < brS) { brS = s3; br = { x, y }; }
-      if (s4 < blS) { blS = s4; bl = { x, y }; }
+  // Row & column edge-count projections
+  const rowCount = new Float32Array(pH);
+  const colCount = new Float32Array(pW);
+  const x0 = Math.floor(pW*pad), x1 = Math.ceil(pW*(1-pad));
+  const y0 = Math.floor(pH*pad), y1 = Math.ceil(pH*(1-pad));
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      if (edge[y*pW+x] > thresh) { rowCount[y]++; colCount[x]++; }
     }
   }
+
+  // "First dense line from outside" — document border spans ≥ 18% of dimension
+  const rowMin = (x1 - x0) * 0.18;
+  const colMin = (y1 - y0) * 0.18;
+  const half = 0.5;
+
+  let topY = Math.floor(pH * 0.08);
+  for (let y = y0; y < pH * half; y++) {
+    if (rowCount[y] >= rowMin) { topY = y; break; }
+  }
+  let botY = Math.floor(pH * 0.92);
+  for (let y = y1 - 1; y >= pH * half; y--) {
+    if (rowCount[y] >= rowMin) { botY = y; break; }
+  }
+  let leftX = Math.floor(pW * 0.08);
+  for (let x = x0; x < pW * half; x++) {
+    if (colCount[x] >= colMin) { leftX = x; break; }
+  }
+  let rightX = Math.floor(pW * 0.92);
+  for (let x = x1 - 1; x >= pW * half; x--) {
+    if (colCount[x] >= colMin) { rightX = x; break; }
+  }
+
+  // Sanity check — if detected region is too small, use generous defaults
+  if (rightX - leftX < pW * 0.25 || botY - topY < pH * 0.25) {
+    const m = 0.06;
+    return [
+      { x: iW * m,       y: iH * m       },
+      { x: iW * (1 - m), y: iH * m       },
+      { x: iW * (1 - m), y: iH * (1 - m) },
+      { x: iW * m,       y: iH * (1 - m) },
+    ];
+  }
+
+  // Corner refinement: near each axis intersection, find closest strong edge pixel
+  // to handle document tilt (the border lines may not be perfectly axis-aligned)
+  const searchR = Math.floor(Math.min(pW, pH) * 0.1);
+  function refineCorner(cx, cy, dirX, dirY) {
+    let best = { x: cx, y: cy }, bestScore = -Infinity;
+    for (let dy = -searchR; dy <= searchR; dy++) {
+      for (let dx = -searchR; dx <= searchR; dx++) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= pW || ny >= pH) continue;
+        if (edge[ny*pW+nx] < thresh) continue;
+        // Prefer edge pixels in the outward corner direction, penalise distance
+        const score = dx * dirX + dy * dirY - (dx*dx + dy*dy) * 0.015;
+        if (score > bestScore) { bestScore = score; best = { x: nx, y: ny }; }
+      }
+    }
+    return best;
+  }
+
+  const tl = refineCorner(leftX,  topY, -1, -1);
+  const tr = refineCorner(rightX, topY,  1, -1);
+  const br = refineCorner(rightX, botY,  1,  1);
+  const bl = refineCorner(leftX,  botY, -1,  1);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   return [
@@ -492,11 +552,19 @@ export default function DocumentScanner() {
       {/* ── Step 2: adjust corners ── */}
       {step === 'adjust' && corners && (
         <div className="card space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-gray-700">Drag corners to align with document edges</p>
-            <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-              <RefreshCw size={12} /> Start over
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setCorners(detectCorners(imageCanvas))}
+                className="flex items-center gap-1 text-xs text-indigo-600 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 transition-colors"
+              >
+                <Crosshair size={12} /> Re-detect
+              </button>
+              <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                <RefreshCw size={12} /> Start over
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-center bg-gray-100 rounded-xl overflow-hidden">
