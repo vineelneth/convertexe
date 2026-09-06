@@ -101,138 +101,167 @@ function warpCanvas(srcCanvas, corners) {
 }
 
 // ─── Auto corner + edge detection ────────────────────────────────────────────
-// Strategy: heavy blur to smooth text → paper brightness mask → boundary scan
-// → Sobel edge refinement for precise corner placement even on tilted docs
+// Pipeline: Gaussian blur → Canny edges → filter to paper boundary → convex hull
+// Falls back to paper-brightness row/col scan if Canny yields too few points.
 
 function detectCorners(imgCanvas) {
   const iW = imgCanvas.width, iH = imgCanvas.height;
-  const PROC_MAX = 600;
+  const PROC_MAX = 640;
   const scale = Math.min(PROC_MAX / iW, PROC_MAX / iH, 1);
   const pW = Math.round(iW * scale), pH = Math.round(iH * scale);
 
   const tmp = document.createElement('canvas');
   tmp.width = pW; tmp.height = pH;
-  const tctx = tmp.getContext('2d');
-  tctx.drawImage(imgCanvas, 0, 0, pW, pH);
-  const { data: px } = tctx.getImageData(0, 0, pW, pH);
+  tmp.getContext('2d').drawImage(imgCanvas, 0, 0, pW, pH);
+  const { data: px } = tmp.getContext('2d').getImageData(0, 0, pW, pH);
 
-  // Grayscale
+  // ── Grayscale ──
   const gray = new Float32Array(pW * pH);
-  for (let i = 0; i < pW * pH; i++) {
-    gray[i] = 0.299 * px[i*4] + 0.587 * px[i*4+1] + 0.114 * px[i*4+2];
-  }
+  for (let i = 0; i < pW * pH; i++)
+    gray[i] = 0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2];
 
-  // 3×3 weighted box blur
+  // ── 3×3 weighted box blur helper ──
   function boxBlur(src, w, h) {
     const dst = new Float32Array(w * h);
-    for (let y = 1; y < h-1; y++) {
-      for (let x = 1; x < w-1; x++) {
-        dst[y*w+x] = (
-          src[(y-1)*w+(x-1)] + 2*src[(y-1)*w+x] + src[(y-1)*w+(x+1)] +
-          2*src[y*w+(x-1)]   + 4*src[y*w+x]     + 2*src[y*w+(x+1)] +
-          src[(y+1)*w+(x-1)] + 2*src[(y+1)*w+x] + src[(y+1)*w+(x+1)]
-        ) / 16;
-      }
-    }
+    for (let y = 1; y < h-1; y++)
+      for (let x = 1; x < w-1; x++)
+        dst[y*w+x] = (src[(y-1)*w+(x-1)] + 2*src[(y-1)*w+x] + src[(y-1)*w+(x+1)] +
+                      2*src[y*w+(x-1)]   + 4*src[y*w+x]     + 2*src[y*w+(x+1)] +
+                      src[(y+1)*w+(x-1)] + 2*src[(y+1)*w+x] + src[(y+1)*w+(x+1)]) / 16;
     return dst;
   }
 
-  // Heavy blur (8 passes) → smooths text, leaving only large-area brightness.
-  // Paper areas stay bright, dark backgrounds stay dark.
+  // ── Paper brightness mask: heavy blur → bright = paper ──
   let heavy = gray;
   for (let i = 0; i < 8; i++) heavy = boxBlur(heavy, pW, pH);
-
-  // Adaptive paper threshold: 65% of 90th-percentile brightness.
-  // Works under varying lighting conditions without a fixed value.
-  const sorted = Array.from(heavy).sort((a, b) => a - b);
-  const p90 = sorted[Math.floor(sorted.length * 0.90)];
-  const paperThresh = Math.max(60, p90 * 0.65);
-
+  const sortH = Array.from(heavy).sort((a, b) => a - b);
+  const p90 = sortH[Math.floor(sortH.length * 0.90)];
+  const paperT = Math.max(60, p90 * 0.65);
   const paper = new Uint8Array(pW * pH);
-  for (let i = 0; i < pW * pH; i++) paper[i] = heavy[i] >= paperThresh ? 1 : 0;
+  for (let i = 0; i < pW * pH; i++) paper[i] = heavy[i] >= paperT ? 1 : 0;
 
-  // Row / column paper-pixel fractions (skip 2% border to avoid vignetting)
-  const padX = Math.max(2, Math.floor(pW * 0.02));
-  const padY = Math.max(2, Math.floor(pH * 0.02));
-  const x0 = padX, x1 = pW - padX, y0 = padY, y1 = pH - padY;
-  const rW = x1 - x0, rH = y1 - y0;
+  // ── 5×5 Gaussian blur for Canny ──
+  const kG = [2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2];
+  const gb = new Float32Array(pW * pH);
+  for (let y = 2; y < pH-2; y++)
+    for (let x = 2; x < pW-2; x++) {
+      let s = 0;
+      for (let ky = -2; ky <= 2; ky++) for (let kx = -2; kx <= 2; kx++)
+        s += gray[(y+ky)*pW+(x+kx)] * kG[(ky+2)*5+(kx+2)];
+      gb[y*pW+x] = s / 159;
+    }
 
-  const rowFrac = new Float32Array(pH);
-  for (let y = y0; y < y1; y++) {
-    let cnt = 0;
-    for (let x = x0; x < x1; x++) cnt += paper[y*pW+x];
-    rowFrac[y] = cnt / rW;
-  }
-  const colFrac = new Float32Array(pW);
-  for (let x = x0; x < x1; x++) {
-    let cnt = 0;
-    for (let y = y0; y < y1; y++) cnt += paper[y*pW+x];
-    colFrac[x] = cnt / rH;
-  }
-
-  // Scan inward from each side; first row/col with ≥40% paper pixels = document edge
-  const MIN_FRAC = 0.40;
-  let topY = Math.floor(pH * 0.06);
-  for (let y = y0; y < pH * 0.55; y++) { if (rowFrac[y] >= MIN_FRAC) { topY = y; break; } }
-  let botY = Math.floor(pH * 0.94);
-  for (let y = y1-1; y >= pH * 0.45; y--) { if (rowFrac[y] >= MIN_FRAC) { botY = y; break; } }
-  let leftX = Math.floor(pW * 0.06);
-  for (let x = x0; x < pW * 0.55; x++) { if (colFrac[x] >= MIN_FRAC) { leftX = x; break; } }
-  let rightX = Math.floor(pW * 0.94);
-  for (let x = x1-1; x >= pW * 0.45; x--) { if (colFrac[x] >= MIN_FRAC) { rightX = x; break; } }
-
-  // Sanity: if bounds too narrow, fall back to generous inset
-  if (rightX - leftX < pW * 0.20 || botY - topY < pH * 0.20) {
-    const m = 0.05;
-    return [
-      {x: iW*m, y: iH*m}, {x: iW*(1-m), y: iH*m},
-      {x: iW*(1-m), y: iH*(1-m)}, {x: iW*m, y: iH*(1-m)},
-    ];
-  }
-
-  // Light Sobel on moderately blurred image for sub-pixel corner refinement.
-  // Handles tilted documents — the actual corner pixel is near but not exactly
-  // at the axis-intersection estimated above.
-  let lb = boxBlur(boxBlur(gray, pW, pH), pW, pH);
-  const edge = new Float32Array(pW * pH);
-  let maxE = 1;
-  for (let y = 1; y < pH-1; y++) {
+  // ── Sobel gradient ──
+  const mag = new Float32Array(pW * pH);
+  const angQ = new Uint8Array(pW * pH); // 0=horiz 1=diag/ 2=vert 3=diag\
+  let maxMag = 1;
+  for (let y = 1; y < pH-1; y++)
     for (let x = 1; x < pW-1; x++) {
-      const gx = -lb[(y-1)*pW+(x-1)] + lb[(y-1)*pW+(x+1)] - 2*lb[y*pW+(x-1)] + 2*lb[y*pW+(x+1)] - lb[(y+1)*pW+(x-1)] + lb[(y+1)*pW+(x+1)];
-      const gy =  lb[(y-1)*pW+(x-1)] + 2*lb[(y-1)*pW+x]  + lb[(y-1)*pW+(x+1)] - lb[(y+1)*pW+(x-1)] - 2*lb[(y+1)*pW+x] - lb[(y+1)*pW+(x+1)];
-      edge[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
-      if (edge[y*pW+x] > maxE) maxE = edge[y*pW+x];
+      const gx = -gb[(y-1)*pW+(x-1)] +gb[(y-1)*pW+(x+1)] -2*gb[y*pW+(x-1)] +2*gb[y*pW+(x+1)] -gb[(y+1)*pW+(x-1)] +gb[(y+1)*pW+(x+1)];
+      const gy =  gb[(y-1)*pW+(x-1)] +2*gb[(y-1)*pW+x] +gb[(y-1)*pW+(x+1)] -gb[(y+1)*pW+(x-1)] -2*gb[(y+1)*pW+x] -gb[(y+1)*pW+(x+1)];
+      mag[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
+      if (mag[y*pW+x] > maxMag) maxMag = mag[y*pW+x];
+      const a = (Math.atan2(gy, gx) * 180 / Math.PI + 180) % 180;
+      angQ[y*pW+x] = a < 22.5 || a >= 157.5 ? 0 : a < 67.5 ? 1 : a < 112.5 ? 2 : 3;
     }
-  }
-  const eThresh = maxE * 0.10;
 
-  const searchR = Math.floor(Math.min(pW, pH) * 0.09);
-  function refineCorner(cx, cy, dirX, dirY) {
-    let best = {x: cx, y: cy}, bestScore = -Infinity;
-    for (let dy = -searchR; dy <= searchR; dy++) {
-      for (let dx = -searchR; dx <= searchR; dx++) {
-        const nx = cx+dx, ny = cy+dy;
-        if (nx < 0 || ny < 0 || nx >= pW || ny >= pH) continue;
-        if (edge[ny*pW+nx] < eThresh) continue;
-        // Score: outward corner direction weighted over distance penalty
-        const score = dx*dirX + dy*dirY - (dx*dx + dy*dy) * 0.018;
-        if (score > bestScore) { bestScore = score; best = {x: nx, y: ny}; }
+  // ── Non-maximum suppression ──
+  const nms = new Float32Array(pW * pH);
+  for (let y = 1; y < pH-1; y++)
+    for (let x = 1; x < pW-1; x++) {
+      const m = mag[y*pW+x]; let q, r;
+      switch (angQ[y*pW+x]) {
+        case 0: q = mag[y*pW+x+1];       r = mag[y*pW+x-1];           break;
+        case 1: q = mag[(y+1)*pW+(x-1)]; r = mag[(y-1)*pW+(x+1)];    break;
+        case 2: q = mag[(y+1)*pW+x];     r = mag[(y-1)*pW+x];         break;
+        default:q = mag[(y-1)*pW+(x-1)]; r = mag[(y+1)*pW+(x+1)];
       }
+      nms[y*pW+x] = m >= q && m >= r ? m : 0;
     }
-    return best;
-  }
 
-  const tl = refineCorner(leftX,  topY, -1, -1);
-  const tr = refineCorner(rightX, topY,  1, -1);
-  const br = refineCorner(rightX, botY,  1,  1);
-  const bl = refineCorner(leftX,  botY, -1,  1);
+  // ── Hysteresis thresholding ──
+  const highT = maxMag * 0.15, lowT = highT * 0.35;
+  const edges = new Uint8Array(pW * pH);
+  for (let i = 0; i < pW*pH; i++) edges[i] = nms[i] >= highT ? 2 : nms[i] >= lowT ? 1 : 0;
+  for (let y = 1; y < pH-1; y++)
+    for (let x = 1; x < pW-1; x++)
+      if (edges[y*pW+x] === 1) {
+        const nb = edges[(y-1)*pW+(x-1)]|edges[(y-1)*pW+x]|edges[(y-1)*pW+(x+1)]
+                  |edges[y*pW+(x-1)]|edges[y*pW+(x+1)]
+                  |edges[(y+1)*pW+(x-1)]|edges[(y+1)*pW+x]|edges[(y+1)*pW+(x+1)];
+        edges[y*pW+x] = (nb & 2) ? 2 : 0;
+      }
+
+  // ── Collect Canny edges that lie on the paper/background boundary ──
+  // An edge pixel qualifies if at least one 8-neighbor is non-paper (background).
+  // This isolates document border edges and discards interior text/content edges.
+  const docPts = [];
+  for (let y = 1; y < pH-1; y++)
+    for (let x = 1; x < pW-1; x++) {
+      if (edges[y*pW+x] !== 2) continue;
+      const nbP = paper[(y-1)*pW+(x-1)]+paper[(y-1)*pW+x]+paper[(y-1)*pW+(x+1)]
+                 +paper[y*pW+(x-1)]+paper[y*pW+(x+1)]
+                 +paper[(y+1)*pW+(x-1)]+paper[(y+1)*pW+x]+paper[(y+1)*pW+(x+1)];
+      if (nbP < 8) docPts.push([x, y]);
+    }
+
+  // ── Convex hull (Graham scan) → 4-corner extraction ──
+  function hullCorners(pts) {
+    if (pts.length < 4) return null;
+    pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const cross = (O, A, B) => (A[0]-O[0])*(B[1]-O[1]) - (A[1]-O[1])*(B[0]-O[0]);
+    const lo = [], hi = [];
+    for (const p of pts) { while (lo.length >= 2 && cross(lo[lo.length-2], lo[lo.length-1], p) <= 0) lo.pop(); lo.push(p); }
+    for (let i = pts.length-1; i >= 0; i--) { const p = pts[i]; while (hi.length >= 2 && cross(hi[hi.length-2], hi[hi.length-1], p) <= 0) hi.pop(); hi.push(p); }
+    hi.pop(); lo.pop();
+    const hull = lo.concat(hi);
+    // Pick the 4 hull points that best represent TL/TR/BR/BL by diagonal projection
+    let tl=hull[0], tr=hull[0], br=hull[0], bl=hull[0];
+    let minS=1e9, maxD=-1e9, maxS=-1e9, minD=1e9;
+    for (const [x, y] of hull) {
+      if (x+y < minS) { minS=x+y; tl=[x,y]; }
+      if (x-y > maxD) { maxD=x-y; tr=[x,y]; }
+      if (x+y > maxS) { maxS=x+y; br=[x,y]; }
+      if (x-y < minD) { minD=x-y; bl=[x,y]; }
+    }
+    return [tl, tr, br, bl];
+  }
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const toImg = ([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) });
+
+  // ── Primary: Canny + paper-boundary hybrid ──
+  if (docPts.length >= 20) {
+    const corners = hullCorners(docPts);
+    if (corners) {
+      const [tl, tr, br, bl] = corners;
+      if ((br[0]-tl[0]) > pW*0.25 && (br[1]-tl[1]) > pH*0.25)
+        return [toImg(tl), toImg(tr), toImg(br), toImg(bl)];
+    }
+  }
+
+  // ── Fallback: paper-mask row/col boundary scan ──
+  const padX = Math.max(2, Math.floor(pW*0.02)), padY = Math.max(2, Math.floor(pH*0.02));
+  const x0 = padX, x1 = pW-padX, y0 = padY, y1 = pH-padY;
+  const rowFrac = new Float32Array(pH), colFrac = new Float32Array(pW);
+  for (let y = y0; y < y1; y++) { let c=0; for (let x=x0;x<x1;x++) c+=paper[y*pW+x]; rowFrac[y]=c/(x1-x0); }
+  for (let x = x0; x < x1; x++) { let c=0; for (let y=y0;y<y1;y++) c+=paper[y*pW+x]; colFrac[x]=c/(y1-y0); }
+  const MF = 0.40;
+  let topY=Math.floor(pH*0.06), botY=Math.floor(pH*0.94), leftX=Math.floor(pW*0.06), rightX=Math.floor(pW*0.94);
+  for (let y=y0; y<pH*0.55; y++) if (rowFrac[y]>=MF) { topY=y; break; }
+  for (let y=y1-1; y>=pH*0.45; y--) if (rowFrac[y]>=MF) { botY=y; break; }
+  for (let x=x0; x<pW*0.55; x++) if (colFrac[x]>=MF) { leftX=x; break; }
+  for (let x=x1-1; x>=pW*0.45; x--) if (colFrac[x]>=MF) { rightX=x; break; }
+
+  if (rightX - leftX < pW*0.20 || botY - topY < pH*0.20) {
+    const m = 0.05;
+    return [{x:iW*m,y:iH*m},{x:iW*(1-m),y:iH*m},{x:iW*(1-m),y:iH*(1-m)},{x:iW*m,y:iH*(1-m)}];
+  }
   return [
-    {x: clamp(tl.x/scale, 0, iW), y: clamp(tl.y/scale, 0, iH)},
-    {x: clamp(tr.x/scale, 0, iW), y: clamp(tr.y/scale, 0, iH)},
-    {x: clamp(br.x/scale, 0, iW), y: clamp(br.y/scale, 0, iH)},
-    {x: clamp(bl.x/scale, 0, iW), y: clamp(bl.y/scale, 0, iH)},
+    {x:clamp(leftX/scale,0,iW),  y:clamp(topY/scale,0,iH)},
+    {x:clamp(rightX/scale,0,iW), y:clamp(topY/scale,0,iH)},
+    {x:clamp(rightX/scale,0,iW), y:clamp(botY/scale,0,iH)},
+    {x:clamp(leftX/scale,0,iW),  y:clamp(botY/scale,0,iH)},
   ];
 }
 
