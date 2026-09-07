@@ -335,7 +335,7 @@ export default function AudioTrimmer() {
           {file && duration != null && (
             <>
               {/* Stats row */}
-              <div className="flex items-center justify-between text-xs text-gray-500 px-0.5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 px-0.5 gap-0.5 sm:gap-0">
                 <span>
                   Total duration: <span className="font-semibold text-gray-700">{formatTime(duration)}</span>
                 </span>

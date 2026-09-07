@@ -41,13 +41,13 @@ export default function FileDropzone({ file, onFileChange, accept, label, suppor
     >
       <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={e => e.target.files[0] && onFileChange(e.target.files[0])} />
 
-      <div className="flex flex-col items-center justify-center p-10 text-center">
+      <div className="flex flex-col items-center justify-center p-6 sm:p-10 text-center">
         {file ? (
           <>
-            <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
-              <FileCheck size={26} className="text-emerald-600" />
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
+              <FileCheck size={22} className="text-emerald-600" />
             </div>
-            <p className="font-semibold text-gray-800 truncate max-w-xs">{file.name}</p>
+            <p className="font-semibold text-gray-800 truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
             <p className="text-gray-400 text-sm mt-1">{formatBytes(file.size)}</p>
             <button
               onClick={handleClear}
@@ -58,9 +58,9 @@ export default function FileDropzone({ file, onFileChange, accept, label, suppor
           </>
         ) : (
           <>
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-colors shadow-sm
+            <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 transition-colors shadow-sm
               ${dragging ? 'bg-indigo-100' : 'bg-white border border-gray-200'}`}>
-              <Upload size={28} className={dragging ? 'text-indigo-500' : 'text-gray-400'} />
+              <Upload size={22} className={dragging ? 'text-indigo-500' : 'text-gray-400'} />
             </div>
             <p className="font-semibold text-gray-700 text-base">{label || 'Drop your file here'}</p>
             <p className="text-gray-400 text-sm mt-1">or <span className="text-indigo-600 font-semibold">browse files</span></p>

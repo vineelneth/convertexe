@@ -40,7 +40,7 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-10 w-full">
+      <main className="flex-1 px-4 py-6 sm:py-10 w-full">
         {children}
       </main>
 

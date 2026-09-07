@@ -93,7 +93,7 @@ export default function Home() {
     <div className="max-w-6xl mx-auto">
 
       {/* ── Hero ── */}
-      <section className="relative text-center py-20 overflow-hidden">
+      <section className="relative text-center py-12 sm:py-20 overflow-hidden">
         {/* background blobs */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
@@ -103,7 +103,7 @@ export default function Home() {
             <Zap size={12} /> Free · Fast · No account needed
           </span>
 
-          <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 mb-5 leading-[1.1] tracking-tight">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-5 leading-[1.1] tracking-tight">
             <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
               Convertexe
             </span>
@@ -113,7 +113,7 @@ export default function Home() {
             Files. Simplified.
           </p>
 
-          <p className="text-base text-gray-500 max-w-xl mx-auto mb-10 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed">
             All your image, audio, and PDF tools in one place — free, instant, and completely private.
           </p>
 
@@ -127,7 +127,7 @@ export default function Home() {
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
+                className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
               >
                 <Icon size={16} /> {label}
               </button>
@@ -137,22 +137,22 @@ export default function Home() {
       </section>
 
       {/* ── Stats ── */}
-      <section className="grid grid-cols-3 gap-4 mb-16">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4 mb-12 sm:mb-16">
         {stats.map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 flex items-center gap-4">
-            <div className="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <s.icon size={20} className="text-indigo-600" />
+          <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-2 py-3 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-center gap-1 sm:gap-4 text-center sm:text-left">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
+              <s.icon size={16} className="text-indigo-600" />
             </div>
-            <div>
-              <p className="font-bold text-xl text-gray-900 leading-none">{s.label}</p>
-              <p className="text-gray-500 text-sm mt-0.5">{s.sub}</p>
+            <div className="min-w-0">
+              <p className="font-bold text-xs sm:text-xl text-gray-900 leading-tight">{s.label}</p>
+              <p className="text-gray-500 text-xs mt-0.5 hidden sm:block">{s.sub}</p>
             </div>
           </div>
         ))}
       </section>
 
       {/* ── Tool groups ── */}
-      <section className="pb-16 space-y-14">
+      <section className="pb-10 sm:pb-16 space-y-10 sm:space-y-14">
         {featureGroups.map((group) => (
           <div key={group.id} id={group.id}>
 
@@ -169,10 +169,10 @@ export default function Home() {
                 <Link
                   key={tool.to}
                   to={tool.to}
-                  className={`group bg-white rounded-2xl shadow-sm hover:shadow-md p-5 flex flex-col gap-3 no-underline transition-all duration-200 hover:-translate-y-1 ring-2 ${accentRing[group.accent]}`}
+                  className={`group bg-white rounded-2xl shadow-sm hover:shadow-md p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 no-underline transition-all duration-200 hover:-translate-y-1 ring-2 ${accentRing[group.accent]}`}
                 >
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tool.grad} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                    <tool.icon size={22} className="text-white" />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${tool.grad} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                    <tool.icon size={18} className="text-white" />
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors text-sm leading-snug">{tool.title}</h3>

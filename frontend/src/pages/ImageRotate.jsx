@@ -147,7 +147,7 @@ export default function ImageRotate() {
           {/* Flip */}
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-3">Flip:</p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {[
                 { label: 'No flip', val: '' },
                 { label: 'Horizontal', val: 'horizontal' },
