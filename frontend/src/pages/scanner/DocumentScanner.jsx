@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan, Crosshair, Plus, FileText, Image } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan, Crosshair, Plus, FileText, Image, Zap } from 'lucide-react';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
@@ -413,45 +413,219 @@ function CameraCapture({ onCapture, onClose }) {
   const streamRef = useRef(null);
   const [ready, setReady] = useState(false);
   const [err, setErr] = useState('');
+  const [facing, setFacing] = useState('environment');
+  const [zoom, setZoom] = useState(1);
+  const [hwZoom, setHwZoom] = useState(false);
+  const [hwZoomMax, setHwZoomMax] = useState(4);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const zoomRef = useRef(1);
+  const activePointers = useRef(new Map());
+  const pinchStart = useRef(null); // { dist, zoom }
 
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-    }).then(stream => {
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-      setReady(true);
-    }).catch(e => setErr('Camera access denied: ' + e.message));
-    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); };
-  }, []);
+    let cancelled = false;
+    async function start() {
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+      setReady(false); setErr('');
+      setZoom(1); zoomRef.current = 1;
+      setTorchOn(false); setTorchSupported(false); setHwZoom(false);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        });
+        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        const track = stream.getVideoTracks()[0];
+        const caps = track.getCapabilities?.() ?? {};
+        if (caps.zoom && caps.zoom.max > 1) {
+          setHwZoom(true);
+          setHwZoomMax(Math.min(caps.zoom.max, 8));
+        }
+        if (caps.torch) setTorchSupported(true);
+        setReady(true);
+      } catch (e) {
+        if (!cancelled) setErr('Camera access denied: ' + e.message);
+      }
+    }
+    start();
+    return () => {
+      cancelled = true;
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, [facing]);
+
+  const applyZoom = async (newZoom) => {
+    const max = hwZoom ? hwZoomMax : 5;
+    const clamped = Math.max(1, Math.min(max, newZoom));
+    zoomRef.current = clamped;
+    setZoom(clamped);
+    if (hwZoom) {
+      const track = streamRef.current?.getVideoTracks()[0];
+      if (track) track.applyConstraints({ advanced: [{ zoom: clamped }] }).catch(() => {});
+    }
+  };
+
+  const toggleTorch = () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !torchOn;
+    track.applyConstraints({ advanced: [{ torch: next }] }).catch(() => {});
+    setTorchOn(next);
+  };
+
+  // Pinch-to-zoom
+  const onPointerDown = (e) => {
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (!activePointers.current.has(e.pointerId)) return;
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = [...activePointers.current.values()];
+    if (pts.length === 2) {
+      const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      if (!pinchStart.current) {
+        pinchStart.current = { dist, zoom: zoomRef.current };
+      } else {
+        const newZoom = pinchStart.current.zoom * (dist / pinchStart.current.dist);
+        applyZoom(newZoom);
+      }
+    }
+  };
+  const onPointerUp = (e) => {
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size < 2) pinchStart.current = null;
+  };
 
   const capture = () => {
     const v = videoRef.current;
     const c = document.createElement('canvas');
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
+    const currentZoom = zoomRef.current;
+    if (!hwZoom && currentZoom > 1) {
+      // CSS zoom: crop the center region that matches what the user sees
+      const w = Math.round(v.videoWidth / currentZoom);
+      const h = Math.round(v.videoHeight / currentZoom);
+      const sx = Math.round((v.videoWidth - w) / 2);
+      const sy = Math.round((v.videoHeight - h) / 2);
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(v, sx, sy, w, h, 0, 0, w, h);
+    } else {
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext('2d').drawImage(v, 0, 0);
+    }
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     onCapture(c);
   };
 
+  // For CSS zoom: scale the video element; hardware zoom shows already-zoomed feed
+  const cssScale = hwZoom ? 1 : zoom;
+
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
-      <div className="flex items-center justify-between p-4 shrink-0">
-        <span className="text-white font-semibold text-lg">Camera</span>
-        <button onClick={onClose} className="text-white p-1 hover:text-gray-300"><X size={24} /></button>
-      </div>
-      {err && <div className="text-red-400 text-sm px-4 pb-2">{err}</div>}
-      <div className="flex-1 flex items-center justify-center overflow-hidden">
-        <video ref={videoRef} autoPlay playsInline muted className="max-h-full max-w-full object-contain" />
-      </div>
-      <div className="p-6 flex justify-center shrink-0">
-        <button
-          onClick={capture}
-          disabled={!ready}
-          className="w-16 h-16 rounded-full bg-white border-4 border-indigo-500 flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
-        >
-          <div className="w-11 h-11 rounded-full bg-indigo-600" />
+    <div className="fixed inset-0 bg-black z-50 flex flex-col select-none">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-3 shrink-0 bg-gradient-to-b from-black/70 to-transparent absolute top-0 left-0 right-0 z-10">
+        <button onClick={onClose} className="text-white p-2 -ml-2 active:opacity-60">
+          <X size={24} />
         </button>
+        <div className="flex items-center gap-1">
+          {torchSupported && (
+            <button
+              onClick={toggleTorch}
+              className={`p-2 rounded-full active:opacity-60 ${torchOn ? 'text-yellow-400' : 'text-white/80'}`}
+            >
+              <Zap size={22} fill={torchOn ? 'currentColor' : 'none'} />
+            </button>
+          )}
+          <button
+            onClick={() => setFacing(f => f === 'environment' ? 'user' : 'environment')}
+            className="text-white/80 p-2 active:opacity-60"
+          >
+            <RefreshCw size={22} />
+          </button>
+        </div>
+      </div>
+
+      {err && (
+        <div className="absolute top-16 left-4 right-4 z-10 bg-red-900/80 text-red-200 text-sm px-4 py-2 rounded-lg">
+          {err}
+        </div>
+      )}
+
+      {/* Viewfinder — fills full screen, touch area for pinch zoom */}
+      <div
+        className="flex-1 relative overflow-hidden"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        style={{ touchAction: 'none' }}
+      >
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover"
+          style={{
+            transform: `scale(${cssScale})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.05s ease-out',
+          }}
+        />
+
+        {/* Document guide: corner brackets */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="relative" style={{ width: '82%', height: '72%' }}>
+            {[
+              'top-0 left-0 border-t-2 border-l-2',
+              'top-0 right-0 border-t-2 border-r-2',
+              'bottom-0 right-0 border-b-2 border-r-2',
+              'bottom-0 left-0 border-b-2 border-l-2',
+            ].map((cls, i) => (
+              <div key={i} className={`absolute w-7 h-7 border-white/70 rounded-sm ${cls}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* Zoom level badge */}
+        {zoom > 1.05 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm font-medium px-3 py-1 rounded-full pointer-events-none">
+            {zoom.toFixed(1)}×
+          </div>
+        )}
+      </div>
+
+      {/* Bottom controls */}
+      <div className="shrink-0 bg-gradient-to-t from-black/80 to-transparent px-6 pb-10 pt-6 space-y-5">
+        {/* Zoom presets */}
+        <div className="flex justify-center gap-5">
+          {[1, 2, 3].map(z => (
+            <button
+              key={z}
+              onClick={() => applyZoom(z)}
+              className={`w-11 h-11 rounded-full text-sm font-semibold border transition-all active:scale-90 ${
+                Math.abs(zoom - z) < 0.3
+                  ? 'bg-white text-black border-white scale-110'
+                  : 'bg-black/40 text-white border-white/40'
+              }`}
+            >
+              {z}×
+            </button>
+          ))}
+        </div>
+
+        {/* Shutter button */}
+        <div className="flex justify-center">
+          <button
+            onClick={capture}
+            disabled={!ready}
+            className="w-20 h-20 rounded-full bg-white border-4 border-indigo-500 flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform"
+          >
+            <div className="w-14 h-14 rounded-full bg-indigo-600" />
+          </button>
+        </div>
       </div>
     </div>
   );
