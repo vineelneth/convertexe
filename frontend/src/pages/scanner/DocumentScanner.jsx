@@ -101,8 +101,9 @@ function warpCanvas(srcCanvas, corners) {
 }
 
 // ─── Auto corner + edge detection ────────────────────────────────────────────
-// Pipeline: Gaussian blur → Canny → connected components → convex hull →
-//           Douglas-Peucker → largest quadrilateral = document boundary.
+// Pipeline: Gaussian blur → Canny (BFS hysteresis) → Hough line transform →
+//           find 2 pairs of perpendicular lines → 4 intersections = corners.
+// Fallback: connected components on lightly-dilated edges → convex hull.
 
 function detectCorners(imgCanvas) {
   const iW = imgCanvas.width, iH = imgCanvas.height;
@@ -116,20 +117,26 @@ function detectCorners(imgCanvas) {
   const { data: px } = tmp.getContext('2d').getImageData(0, 0, pW, pH);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const fallback = () => { const m = 0.05; return [{x:iW*m,y:iH*m},{x:iW*(1-m),y:iH*m},{x:iW*(1-m),y:iH*(1-m)},{x:iW*m,y:iH*(1-m)}]; };
+  const fallback = () => {
+    const m = 0.05;
+    return [
+      { x: iW*m, y: iH*m }, { x: iW*(1-m), y: iH*m },
+      { x: iW*(1-m), y: iH*(1-m) }, { x: iW*m, y: iH*(1-m) }
+    ];
+  };
 
   // ── Grayscale ──
   const gray = new Float32Array(pW * pH);
   for (let i = 0; i < pW * pH; i++)
     gray[i] = 0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2];
 
-  // ── 5×5 Gaussian blur (removes text/wrinkles before edge detection) ──
+  // ── 5×5 Gaussian blur ──
   const kG = [2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2];
   const gb = new Float32Array(pW * pH);
   for (let y = 2; y < pH-2; y++)
     for (let x = 2; x < pW-2; x++) {
       let s = 0;
-      for (let ky=-2; ky<=2; ky++) for (let kx=-2; kx<=2; kx++)
+      for (let ky = -2; ky <= 2; ky++) for (let kx = -2; kx <= 2; kx++)
         s += gray[(y+ky)*pW+(x+kx)] * kG[(ky+2)*5+(kx+2)];
       gb[y*pW+x] = s / 159;
     }
@@ -161,63 +168,197 @@ function detectCorners(imgCanvas) {
     }
 
   // ── Adaptive Canny thresholds — 88th percentile of non-zero NMS magnitudes ──
-  // Percentile is robust to one dominant edge blowing up the fixed-fraction approach.
   const nzMags = [];
   for (let i = 0; i < pW*pH; i++) if (nms[i] > 0) nzMags.push(nms[i]);
   nzMags.sort((a, b) => a - b);
   const highT = nzMags.length ? nzMags[Math.floor(nzMags.length * 0.88)] : 30;
-  const lowT = highT * 0.35;
+  const lowT  = highT * 0.35;
 
-  // ── Hysteresis thresholding (Canny) ──
+  // ── Canny hysteresis — BFS so entire edge chains are followed, not just
+  //    immediate neighbours of strong pixels (fixes broken document borders) ──
   const edges = new Uint8Array(pW * pH);
-  for (let i = 0; i < pW*pH; i++) edges[i] = nms[i] >= highT ? 2 : nms[i] >= lowT ? 1 : 0;
-  for (let y = 1; y < pH-1; y++)
-    for (let x = 1; x < pW-1; x++)
-      if (edges[y*pW+x] === 1) {
-        const nb = edges[(y-1)*pW+(x-1)]|edges[(y-1)*pW+x]|edges[(y-1)*pW+(x+1)]
-                  |edges[y*pW+(x-1)]|edges[y*pW+(x+1)]
-                  |edges[(y+1)*pW+(x-1)]|edges[(y+1)*pW+x]|edges[(y+1)*pW+(x+1)];
-        edges[y*pW+x] = (nb & 2) ? 2 : 0;
-      }
+  const hysQ = [];
+  for (let i = 0; i < pW*pH; i++) {
+    if      (nms[i] >= highT) { edges[i] = 2; hysQ.push(i); }
+    else if (nms[i] >= lowT)    edges[i] = 1;
+  }
+  for (let qi = 0; qi < hysQ.length; qi++) {
+    const idx = hysQ[qi], cy = (idx / pW) | 0, cx = idx % pW;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dy && !dx) continue;
+      const ny = cy+dy, nx = cx+dx;
+      if (ny < 0 || ny >= pH || nx < 0 || nx >= pW) continue;
+      const ni = ny*pW+nx;
+      if (edges[ni] === 1) { edges[ni] = 2; hysQ.push(ni); }
+    }
+  }
+  for (let i = 0; i < pW*pH; i++) if (edges[i] === 1) edges[i] = 0;
 
-  // ── Morphological dilation (radius 3) — bridges gaps in broken document borders ──
+  // ── Shared helpers ──
+  function polyArea(pts) {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i+1) % pts.length;
+      a += pts[i][0]*pts[j][1] - pts[j][0]*pts[i][1];
+    }
+    return Math.abs(a) / 2;
+  }
+
+  function sort4(pts) {
+    let tl=pts[0], tr=pts[0], br=pts[0], bl=pts[0];
+    let minS=1e9, maxD=-1e9, maxS=-1e9, minD=1e9;
+    for (const [x, y] of pts) {
+      if (x+y < minS) { minS=x+y; tl=[x,y]; }
+      if (x-y > maxD) { maxD=x-y; tr=[x,y]; }
+      if (x+y > maxS) { maxS=x+y; br=[x,y]; }
+      if (x-y < minD) { minD=x-y; bl=[x,y]; }
+    }
+    return [tl, tr, br, bl];
+  }
+
+  function quadScore(quad) {
+    const area = polyArea(quad);
+    if (area < pW * pH * 0.06) return -1;
+    const [tl, tr, br, bl] = quad;
+    const w = Math.max(Math.hypot(tr[0]-tl[0],tr[1]-tl[1]), Math.hypot(br[0]-bl[0],br[1]-bl[1]));
+    const h = Math.max(Math.hypot(bl[0]-tl[0],bl[1]-tl[1]), Math.hypot(br[0]-tr[0],br[1]-tr[1]));
+    if (w < pW*0.20 || h < pH*0.20) return -1;
+    return area;
+  }
+
+  // ── Hough line transform (only votes on strong Canny edges) ──
+  // Document borders are long straight lines → get many more votes than
+  // short text strokes or background texture → reliably float to the top.
+  const THETA = 180;
+  const hDiag = Math.ceil(Math.sqrt(pW*pW + pH*pH));
+  const RSIZE = 2*hDiag + 1;
+  const acc = new Int32Array(THETA * RSIZE);
+  const cosT = new Float32Array(THETA), sinT = new Float32Array(THETA);
+  for (let t = 0; t < THETA; t++) {
+    cosT[t] = Math.cos(t * Math.PI / THETA);
+    sinT[t] = Math.sin(t * Math.PI / THETA);
+  }
+  for (let y = 0; y < pH; y++) {
+    for (let x = 0; x < pW; x++) {
+      if (edges[y*pW+x] !== 2) continue;
+      for (let t = 0; t < THETA; t++) {
+        const r = Math.round(x*cosT[t] + y*sinT[t]) + hDiag;
+        acc[t*RSIZE+r]++;
+      }
+    }
+  }
+
+  // ── Hough peak detection with NMS ──
+  const minVotes = Math.max(40, Math.round(Math.min(pW, pH) * 0.12));
+  const TH_SUPP = 5, RH_SUPP = 15;
+  const peaks = [];
+  for (let t = 0; t < THETA; t++) {
+    for (let r = 0; r < RSIZE; r++) {
+      const v = acc[t*RSIZE+r];
+      if (v < minVotes) continue;
+      let isMax = true;
+      outer: for (let dt = -TH_SUPP; dt <= TH_SUPP; dt++) {
+        const tt = (t+dt+THETA) % THETA;
+        for (let dr = -RH_SUPP; dr <= RH_SUPP; dr++) {
+          const rr = r+dr;
+          if (rr < 0 || rr >= RSIZE) continue;
+          if (acc[tt*RSIZE+rr] > v) { isMax = false; break outer; }
+        }
+      }
+      if (isMax) peaks.push({ t, r: r-hDiag, v });
+    }
+  }
+  peaks.sort((a, b) => b.v - a.v);
+  const lines = peaks.slice(0, 20);
+
+  // ── Find best quadrilateral from Hough lines ──
+  // Seek 2 pairs of (a) mutually parallel lines that are (b) perpendicular
+  // to the other pair → their 4 intersections are the document corners.
+  function lineIntersect(l1, l2) {
+    const c1=cosT[l1.t], s1=sinT[l1.t], c2=cosT[l2.t], s2=sinT[l2.t];
+    const det = c1*s2 - s1*c2;
+    if (Math.abs(det) < 0.02) return null; // parallel
+    return [(l1.r*s2 - l2.r*s1)/det, (l2.r*c1 - l1.r*c2)/det];
+  }
+
+  // Angular separation between two Hough angles, folded to 0–90°
+  function angDiff(t1, t2) {
+    let d = Math.abs(t1-t2) % THETA;
+    if (d > THETA/2) d = THETA-d;
+    return d;
+  }
+
+  let bestQuad = null, bestScore = -1;
+  const N = Math.min(lines.length, 12);
+  const margin = Math.max(pW, pH) * 0.25;
+
+  for (let a = 0; a < N; a++) {
+    for (let b = a+1; b < N; b++) {
+      if (angDiff(lines[a].t, lines[b].t) > 15) continue;   // pair-1 must be parallel
+      for (let c = 0; c < N; c++) {
+        if (c === a || c === b) continue;
+        if (angDiff(lines[a].t, lines[c].t) < 60) continue;  // pair-2 must be perpendicular
+        for (let d = c+1; d < N; d++) {
+          if (d === a || d === b) continue;
+          if (angDiff(lines[c].t, lines[d].t) > 15) continue; // pair-2 must be parallel
+
+          const pts = [
+            lineIntersect(lines[a], lines[c]),
+            lineIntersect(lines[a], lines[d]),
+            lineIntersect(lines[b], lines[d]),
+            lineIntersect(lines[b], lines[c]),
+          ];
+          if (pts.some(p => !p)) continue;
+          if (pts.some(([x, y]) => x < -margin || x > pW+margin || y < -margin || y > pH+margin)) continue;
+
+          const quad = sort4(pts);
+          const score = quadScore(quad);
+          if (score > bestScore) { bestScore = score; bestQuad = quad; }
+        }
+      }
+    }
+  }
+
+  if (bestQuad) {
+    return bestQuad.map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
+  }
+
+  // ── Fallback: connected components with minimal dilation (DR=1) ──
+  // DR=1 bridges tiny 1-pixel gaps without merging text into the border.
   const dilated = new Uint8Array(pW * pH);
-  const DR = 3;
   for (let y = 0; y < pH; y++)
     for (let x = 0; x < pW; x++) {
       if (edges[y*pW+x] !== 2) continue;
-      for (let dy = -DR; dy <= DR; dy++) for (let dx = -DR; dx <= DR; dx++) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         const ny = y+dy, nx = x+dx;
         if (ny >= 0 && ny < pH && nx >= 0 && nx < pW) dilated[ny*pW+nx] = 1;
       }
     }
 
-  // ── Connected components on dilated edge map ──
   const visited = new Uint8Array(pW * pH);
   const components = [];
   for (let sy = 0; sy < pH; sy++) {
     for (let sx = 0; sx < pW; sx++) {
       if (!dilated[sy*pW+sx] || visited[sy*pW+sx]) continue;
-      const comp = [], q = [sy*pW+sx];
+      const comp = [], bfsQ = [sy*pW+sx];
       visited[sy*pW+sx] = 1;
       let qi = 0;
-      while (qi < q.length) {
-        const idx = q[qi++], cy = (idx / pW) | 0, cx = idx % pW;
+      while (qi < bfsQ.length) {
+        const idx = bfsQ[qi++], cy = (idx/pW)|0, cx = idx%pW;
         comp.push([cx, cy]);
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
           const ny = cy+dy, nx = cx+dx;
           if (ny >= 0 && ny < pH && nx >= 0 && nx < pW) {
             const ni = ny*pW+nx;
-            if (dilated[ni] && !visited[ni]) { visited[ni] = 1; q.push(ni); }
+            if (dilated[ni] && !visited[ni]) { visited[ni] = 1; bfsQ.push(ni); }
           }
         }
       }
-      if (comp.length >= 100) components.push(comp);
+      if (comp.length >= 60) components.push(comp);
     }
   }
   components.sort((a, b) => b.length - a.length);
 
-  // ── Convex hull (Graham scan) ──
   function convexHull(pts) {
     const p = [...pts].sort((a, b) => a[0]-b[0] || a[1]-b[1]);
     const cross = (O, A, B) => (A[0]-O[0])*(B[1]-O[1]) - (A[1]-O[1])*(B[0]-O[0]);
@@ -228,57 +369,13 @@ function detectCorners(imgCanvas) {
     return lo.concat(hi);
   }
 
-  // ── Shoelace polygon area ──
-  function polyArea(pts) {
-    let a = 0;
-    for (let i = 0; i < pts.length; i++) {
-      const j = (i+1) % pts.length;
-      a += pts[i][0]*pts[j][1] - pts[j][0]*pts[i][1];
-    }
-    return Math.abs(a) / 2;
-  }
-
-  // ── Sort 4 points into TL / TR / BR / BL order ──
-  function sort4(pts) {
-    let tl=pts[0], tr=pts[0], br=pts[0], bl=pts[0];
-    let minS=1e9, maxDiff=-1e9, maxS=-1e9, minDiff=1e9;
-    for (const [x, y] of pts) {
-      if (x+y < minS)    { minS=x+y;    tl=[x,y]; }
-      if (x-y > maxDiff) { maxDiff=x-y; tr=[x,y]; }
-      if (x+y > maxS)    { maxS=x+y;    br=[x,y]; }
-      if (x-y < minDiff) { minDiff=x-y; bl=[x,y]; }
-    }
-    return [tl, tr, br, bl];
-  }
-
-  // ── Extract quad from hull: pick 4 diagonal extremes directly ──
-  // More robust than DP — always gives exactly 4 meaningful corners.
-  function hullToQuad(hull) {
-    if (hull.length < 4) return null;
-    return sort4(hull);
-  }
-
-  // ── Validate quad dimensions and area ──
-  function quadScore(quad) {
-    const area = polyArea(quad);
-    if (area < pW * pH * 0.06) return -1;
-    const [tl, tr, br, bl] = quad;
-    const w = Math.max(Math.hypot(tr[0]-tl[0], tr[1]-tl[1]), Math.hypot(br[0]-bl[0], br[1]-bl[1]));
-    const h = Math.max(Math.hypot(bl[0]-tl[0], bl[1]-tl[1]), Math.hypot(br[0]-tr[0], br[1]-tr[1]));
-    if (w < pW * 0.20 || h < pH * 0.20) return -1;
-    return area;
-  }
-
-  // ── Try each of the top-10 largest components ──
-  let bestScore = 0, bestQuad = null;
-  for (const comp of components.slice(0, 10)) {
-    // Subsample large components for hull performance
+  for (const comp of components.slice(0, 8)) {
     const pts = comp.length > 3000
       ? comp.filter((_, i) => i % Math.ceil(comp.length / 3000) === 0)
       : comp;
     const hull = convexHull(pts);
-    const quad = hullToQuad(hull);
-    if (!quad) continue;
+    if (hull.length < 4) continue;
+    const quad = sort4(hull);
     const score = quadScore(quad);
     if (score > bestScore) { bestScore = score; bestQuad = quad; }
   }
@@ -287,15 +384,6 @@ function detectCorners(imgCanvas) {
     return bestQuad.map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
   }
 
-  // ── Fallback: convex hull of ALL dilated edge pixels ──
-  const allPts = [];
-  for (let y = 0; y < pH; y++) for (let x = 0; x < pW; x++) if (dilated[y*pW+x]) allPts.push([x,y]);
-  if (allPts.length >= 10) {
-    const hull = convexHull(allPts);
-    const quad = hullToQuad(hull);
-    if (quad && quadScore(quad) >= 0)
-      return quad.map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
-  }
   return fallback();
 }
 
