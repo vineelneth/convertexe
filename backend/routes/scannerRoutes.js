@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { pdfQueue } = require('../queues/queues');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -32,6 +33,26 @@ router.post('/process', upload.single('image'), asyncRoute(async (req, res) => {
     operation: 'scan',
     imagePath: req.file.path,
     options: { mode, format }
+  });
+  res.json({ jobId: 'pdf_' + job.id });
+}));
+
+router.post('/combine', asyncRoute(async (req, res) => {
+  const { filenames } = req.body;
+  if (!Array.isArray(filenames) || filenames.length === 0)
+    return res.status(400).json({ error: 'No pages provided' });
+  if (filenames.length > 50)
+    return res.status(400).json({ error: 'Too many pages (max 50)' });
+
+  const imagePaths = filenames.map(f => path.join(uploadsDir, path.basename(f)));
+  for (const p of imagePaths) {
+    if (!fs.existsSync(p))
+      return res.status(400).json({ error: 'One or more scanned pages have expired. Please re-scan.' });
+  }
+
+  const job = await pdfQueue.add('images-to-pdf', {
+    operation: 'images-to-pdf',
+    imagePaths,
   });
   res.json({ jobId: 'pdf_' + job.id });
 }));

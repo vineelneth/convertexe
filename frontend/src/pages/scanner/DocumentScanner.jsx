@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
-import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan, Crosshair } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Download, CheckCircle, ScanLine, X, Scan, Crosshair, Plus, FileText, Image } from 'lucide-react';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
@@ -106,7 +106,7 @@ function warpCanvas(srcCanvas, corners) {
 
 function detectCorners(imgCanvas) {
   const iW = imgCanvas.width, iH = imgCanvas.height;
-  const PROC_MAX = 800;
+  const PROC_MAX = 900;
   const scale = Math.min(PROC_MAX / iW, PROC_MAX / iH, 1);
   const pW = Math.round(iW * scale), pH = Math.round(iH * scale);
 
@@ -114,6 +114,9 @@ function detectCorners(imgCanvas) {
   tmp.width = pW; tmp.height = pH;
   tmp.getContext('2d').drawImage(imgCanvas, 0, 0, pW, pH);
   const { data: px } = tmp.getContext('2d').getImageData(0, 0, pW, pH);
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const fallback = () => { const m = 0.05; return [{x:iW*m,y:iH*m},{x:iW*(1-m),y:iH*m},{x:iW*(1-m),y:iH*(1-m)},{x:iW*m,y:iH*(1-m)}]; };
 
   // ── Grayscale ──
   const gray = new Float32Array(pW * pH);
@@ -134,13 +137,11 @@ function detectCorners(imgCanvas) {
   // ── Sobel gradient ──
   const mag = new Float32Array(pW * pH);
   const angQ = new Uint8Array(pW * pH);
-  let maxMag = 1;
   for (let y = 1; y < pH-1; y++)
     for (let x = 1; x < pW-1; x++) {
       const gx = -gb[(y-1)*pW+(x-1)]+gb[(y-1)*pW+(x+1)]-2*gb[y*pW+(x-1)]+2*gb[y*pW+(x+1)]-gb[(y+1)*pW+(x-1)]+gb[(y+1)*pW+(x+1)];
       const gy =  gb[(y-1)*pW+(x-1)]+2*gb[(y-1)*pW+x]+gb[(y-1)*pW+(x+1)]-gb[(y+1)*pW+(x-1)]-2*gb[(y+1)*pW+x]-gb[(y+1)*pW+(x+1)];
       mag[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
-      if (mag[y*pW+x] > maxMag) maxMag = mag[y*pW+x];
       const a = (Math.atan2(gy, gx) * 180 / Math.PI + 180) % 180;
       angQ[y*pW+x] = a < 22.5 || a >= 157.5 ? 0 : a < 67.5 ? 1 : a < 112.5 ? 2 : 3;
     }
@@ -159,8 +160,15 @@ function detectCorners(imgCanvas) {
       nms[y*pW+x] = m >= q && m >= r ? m : 0;
     }
 
+  // ── Adaptive Canny thresholds — 88th percentile of non-zero NMS magnitudes ──
+  // Percentile is robust to one dominant edge blowing up the fixed-fraction approach.
+  const nzMags = [];
+  for (let i = 0; i < pW*pH; i++) if (nms[i] > 0) nzMags.push(nms[i]);
+  nzMags.sort((a, b) => a - b);
+  const highT = nzMags.length ? nzMags[Math.floor(nzMags.length * 0.88)] : 30;
+  const lowT = highT * 0.35;
+
   // ── Hysteresis thresholding (Canny) ──
-  const highT = maxMag * 0.12, lowT = highT * 0.3;
   const edges = new Uint8Array(pW * pH);
   for (let i = 0; i < pW*pH; i++) edges[i] = nms[i] >= highT ? 2 : nms[i] >= lowT ? 1 : 0;
   for (let y = 1; y < pH-1; y++)
@@ -172,12 +180,24 @@ function detectCorners(imgCanvas) {
         edges[y*pW+x] = (nb & 2) ? 2 : 0;
       }
 
-  // ── Connected components (iterative BFS) — find top 8 by pixel count ──
+  // ── Morphological dilation (radius 3) — bridges gaps in broken document borders ──
+  const dilated = new Uint8Array(pW * pH);
+  const DR = 3;
+  for (let y = 0; y < pH; y++)
+    for (let x = 0; x < pW; x++) {
+      if (edges[y*pW+x] !== 2) continue;
+      for (let dy = -DR; dy <= DR; dy++) for (let dx = -DR; dx <= DR; dx++) {
+        const ny = y+dy, nx = x+dx;
+        if (ny >= 0 && ny < pH && nx >= 0 && nx < pW) dilated[ny*pW+nx] = 1;
+      }
+    }
+
+  // ── Connected components on dilated edge map ──
   const visited = new Uint8Array(pW * pH);
   const components = [];
   for (let sy = 0; sy < pH; sy++) {
     for (let sx = 0; sx < pW; sx++) {
-      if (edges[sy*pW+sx] !== 2 || visited[sy*pW+sx]) continue;
+      if (!dilated[sy*pW+sx] || visited[sy*pW+sx]) continue;
       const comp = [], q = [sy*pW+sx];
       visited[sy*pW+sx] = 1;
       let qi = 0;
@@ -188,17 +208,14 @@ function detectCorners(imgCanvas) {
           const ny = cy+dy, nx = cx+dx;
           if (ny >= 0 && ny < pH && nx >= 0 && nx < pW) {
             const ni = ny*pW+nx;
-            if (edges[ni] === 2 && !visited[ni]) { visited[ni] = 1; q.push(ni); }
+            if (dilated[ni] && !visited[ni]) { visited[ni] = 1; q.push(ni); }
           }
         }
       }
-      if (comp.length >= 20) components.push(comp);
+      if (comp.length >= 100) components.push(comp);
     }
   }
   components.sort((a, b) => b.length - a.length);
-
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const fallback = () => { const m = 0.05; return [{x:iW*m,y:iH*m},{x:iW*(1-m),y:iH*m},{x:iW*(1-m),y:iH*(1-m)},{x:iW*m,y:iH*(1-m)}]; };
 
   // ── Convex hull (Graham scan) ──
   function convexHull(pts) {
@@ -209,51 +226,6 @@ function detectCorners(imgCanvas) {
     for (let i = p.length-1; i >= 0; i--) { const v=p[i]; while (hi.length >= 2 && cross(hi[hi.length-2], hi[hi.length-1], v) <= 0) hi.pop(); hi.push(v); }
     hi.pop(); lo.pop();
     return lo.concat(hi);
-  }
-
-  // ── Douglas-Peucker simplification (open chain) ──
-  function dpOpen(pts, eps) {
-    if (pts.length <= 2) return pts;
-    const [x1,y1] = pts[0], [x2,y2] = pts[pts.length-1];
-    const len = Math.hypot(x2-x1, y2-y1) || 1;
-    let maxD = 0, maxI = 0;
-    for (let i = 1; i < pts.length-1; i++) {
-      const d = Math.abs((y2-y1)*pts[i][0] - (x2-x1)*pts[i][1] + x2*y1 - y2*x1) / len;
-      if (d > maxD) { maxD = d; maxI = i; }
-    }
-    if (maxD > eps) {
-      const L = dpOpen(pts.slice(0, maxI+1), eps);
-      const R = dpOpen(pts.slice(maxI), eps);
-      return [...L.slice(0, -1), ...R];
-    }
-    return [pts[0], pts[pts.length-1]];
-  }
-
-  // ── Reduce convex hull to exactly 4 points via DP on each semicircle ──
-  // Split hull at diameter endpoints, apply DP to each arc, increase epsilon
-  // until total unique points == 4 (the 4 document corners).
-  function hullTo4(hull) {
-    const n = hull.length;
-    if (n < 4) return null;
-    if (n === 4) return hull;
-    // Find diameter (farthest pair) — O(n) suffices for convex hull using rotating calipers,
-    // but hull is capped at 120 pts so O(n²) is fast enough here.
-    let a = 0, b = 1, maxD2 = 0;
-    for (let i = 0; i < n; i++) for (let j = i+1; j < n; j++) {
-      const d2 = (hull[j][0]-hull[i][0])**2 + (hull[j][1]-hull[i][1])**2;
-      if (d2 > maxD2) { maxD2 = d2; a = i; b = j; }
-    }
-    const arc1 = hull.slice(a, b+1);
-    const arc2 = [...hull.slice(b), ...hull.slice(0, a+1)];
-    let eps = 2;
-    for (let iter = 0; iter < 25; iter++) {
-      const s1 = dpOpen(arc1, eps), s2 = dpOpen(arc2, eps);
-      const total = s1.length + s2.length - 2; // shared endpoints a and b
-      if (total === 4) return [...s1.slice(0, -1), ...s2.slice(0, -1)];
-      if (total < 4) break;
-      eps *= 1.5;
-    }
-    return null;
   }
 
   // ── Shoelace polygon area ──
@@ -279,35 +251,52 @@ function detectCorners(imgCanvas) {
     return [tl, tr, br, bl];
   }
 
-  // ── Try each of the top-8 largest components ──
-  let bestArea = 0, bestQuad = null;
-  for (const comp of components.slice(0, 8)) {
-    const hull = convexHull(comp);
-    if (hull.length < 4) continue;
-    // Cap hull at 120 pts for DP performance (sample evenly)
-    const step = Math.max(1, Math.ceil(hull.length / 120));
-    const hS = hull.filter((_, i) => i % step === 0);
-    const quad = hullTo4(hS);
-    if (!quad || quad.length !== 4) continue;
+  // ── Extract quad from hull: pick 4 diagonal extremes directly ──
+  // More robust than DP — always gives exactly 4 meaningful corners.
+  function hullToQuad(hull) {
+    if (hull.length < 4) return null;
+    return sort4(hull);
+  }
+
+  // ── Validate quad dimensions and area ──
+  function quadScore(quad) {
     const area = polyArea(quad);
-    if (area < pW * pH * 0.04) continue; // ignore tiny quads
-    const [tl,,br] = sort4(quad);
-    if ((br[0]-tl[0]) < pW*0.20 || (br[1]-tl[1]) < pH*0.20) continue;
-    if (area > bestArea) { bestArea = area; bestQuad = sort4(quad); }
+    if (area < pW * pH * 0.06) return -1;
+    const [tl, tr, br, bl] = quad;
+    const w = Math.max(Math.hypot(tr[0]-tl[0], tr[1]-tl[1]), Math.hypot(br[0]-bl[0], br[1]-bl[1]));
+    const h = Math.max(Math.hypot(bl[0]-tl[0], bl[1]-tl[1]), Math.hypot(br[0]-tr[0], br[1]-tr[1]));
+    if (w < pW * 0.20 || h < pH * 0.20) return -1;
+    return area;
+  }
+
+  // ── Try each of the top-10 largest components ──
+  let bestScore = 0, bestQuad = null;
+  for (const comp of components.slice(0, 10)) {
+    // Subsample large components for hull performance
+    const pts = comp.length > 3000
+      ? comp.filter((_, i) => i % Math.ceil(comp.length / 3000) === 0)
+      : comp;
+    const hull = convexHull(pts);
+    const quad = hullToQuad(hull);
+    if (!quad) continue;
+    const score = quadScore(quad);
+    if (score > bestScore) { bestScore = score; bestQuad = quad; }
   }
 
   if (bestQuad) {
     return bestQuad.map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
   }
 
-  // ── Fallback: convex hull of ALL edge pixels, diagonal extremes ──
+  // ── Fallback: convex hull of ALL dilated edge pixels ──
   const allPts = [];
-  for (let y = 0; y < pH; y++) for (let x = 0; x < pW; x++) if (edges[y*pW+x] === 2) allPts.push([x,y]);
-  if (allPts.length < 10) return fallback();
-  const hull = convexHull(allPts);
-  const [tl,,br] = sort4(hull);
-  if ((br[0]-tl[0]) < pW*0.20 || (br[1]-tl[1]) < pH*0.20) return fallback();
-  return sort4(hull).map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
+  for (let y = 0; y < pH; y++) for (let x = 0; x < pW; x++) if (dilated[y*pW+x]) allPts.push([x,y]);
+  if (allPts.length >= 10) {
+    const hull = convexHull(allPts);
+    const quad = hullToQuad(hull);
+    if (quad && quadScore(quad) >= 0)
+      return quad.map(([x, y]) => ({ x: clamp(x/scale, 0, iW), y: clamp(y/scale, 0, iH) }));
+  }
+  return fallback();
 }
 
 // ─── Corner editor canvas ─────────────────────────────────────────────────────
@@ -497,11 +486,13 @@ function loadImageToCanvas(src) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DocumentScanner() {
-  const [step, setStep] = useState('idle');       // idle | adjust | done
+  const [step, setStep] = useState('idle');       // idle | adjust | review | done
   const [imageCanvas, setImageCanvas] = useState(null);
   const [corners, setCorners] = useState(null);
-  const [mode, setMode] = useState('bw');          // bw | grayscale | color
-  const [format, setFormat] = useState('pdf');     // pdf | jpg
+  const [mode, setMode] = useState('bw');          // bw | grayscale | color (applies to all pages)
+  const [pages, setPages] = useState([]);          // [{ id, filename, previewUrl }]
+  const [jobType, setJobType] = useState('page'); // 'page' | 'combine'
+  const jobTypeRef = useRef('page');
   const [showCamera, setShowCamera] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -526,7 +517,6 @@ export default function DocumentScanner() {
 
   const handleCameraCapture = (canvas) => {
     setShowCamera(false);
-    // camera canvas might be large — scale it down if needed
     if (canvas.width > MAX_DIM || canvas.height > MAX_DIM) {
       const s = Math.min(MAX_DIM / canvas.width, MAX_DIM / canvas.height);
       const c = document.createElement('canvas');
@@ -538,16 +528,19 @@ export default function DocumentScanner() {
     }
   };
 
+  // Scan a single page — always produces a JPEG; format is chosen at export time
   const handleScan = async () => {
     if (!imageCanvas || !corners) return;
     setLoading(true); setError(''); resetJob();
+    jobTypeRef.current = 'page';
+    setJobType('page');
     try {
       const warped = warpCanvas(imageCanvas, corners);
       const blob = await new Promise(res => warped.toBlob(res, 'image/jpeg', 0.95));
       const formData = new FormData();
       formData.append('image', blob, 'scan.jpg');
       formData.append('mode', mode);
-      formData.append('format', format);
+      formData.append('format', 'jpg');
       const { data } = await axios.post('/api/scanner/process', formData);
       startJob(data.jobId);
     } catch (err) {
@@ -555,6 +548,70 @@ export default function DocumentScanner() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Combine all scanned pages into a single PDF
+  const handleExportPDF = async () => {
+    if (pages.length === 0) return;
+    setLoading(true); setError(''); resetJob();
+    jobTypeRef.current = 'combine';
+    setJobType('combine');
+    try {
+      const { data } = await axios.post('/api/scanner/combine', {
+        filenames: pages.map(p => p.filename),
+      });
+      startJob(data.jobId);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Export failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Download each scanned page as an individual JPEG
+  const handleDownloadImages = async () => {
+    if (pages.length === 0) return;
+    setLoading(true);
+    try {
+      for (let i = 0; i < pages.length; i++) {
+        const a = document.createElement('a');
+        a.href = `/api/download/${pages[i].filename}`;
+        a.download = `scan_page_${i + 1}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        if (i < pages.length - 1) await new Promise(r => setTimeout(r, 400));
+      }
+    } finally {
+      setLoading(false);
+      handleReset();
+    }
+  };
+
+  // Go back to idle to add another page (keeps current pages list)
+  const handleAddPage = () => {
+    setStep('idle');
+    setImageCanvas(null);
+    setCorners(null);
+    setError('');
+    resetJob();
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const handleRemovePage = (id) => {
+    setPages(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleMovePage = (id, direction) => {
+    setPages(prev => {
+      const idx = prev.findIndex(p => p.id === id);
+      if (idx < 0) return prev;
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const arr = [...prev];
+      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+      return arr;
+    });
   };
 
   const handleDownload = () => {
@@ -565,13 +622,35 @@ export default function DocumentScanner() {
 
   const handleReset = () => {
     setStep('idle'); setImageCanvas(null); setCorners(null);
-    setError(''); resetJob();
+    setPages([]); setError(''); resetJob();
+    jobTypeRef.current = 'page'; setJobType('page');
     if (inputRef.current) inputRef.current.value = '';
   };
 
+  // When a page finishes processing: add to list and go to review.
+  // When combine finishes: go to done.
   useEffect(() => {
-    if (status === 'completed') setStep('done');
-  }, [status]);
+    if (status === 'completed' && result) {
+      if (jobTypeRef.current === 'page') {
+        setPages(prev => [...prev, {
+          id: Date.now(),
+          filename: result.filename,
+          previewUrl: `/api/preview/${result.filename}`,
+        }]);
+        setStep('review');
+        setImageCanvas(null);
+        setCorners(null);
+        resetJob();
+      } else {
+        setStep('done');
+      }
+    }
+  }, [status, result]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-return to idle if the last page is removed from review
+  useEffect(() => {
+    if (step === 'review' && pages.length === 0) setStep('idle');
+  }, [pages.length, step]);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -583,7 +662,7 @@ export default function DocumentScanner() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Document Scanner</h1>
-          <p className="text-gray-500 text-sm">Auto-detect edges, correct perspective, export as PDF or image</p>
+          <p className="text-gray-500 text-sm">Auto-detect edges, correct perspective, export as PDF or images</p>
         </div>
       </div>
 
@@ -596,9 +675,23 @@ export default function DocumentScanner() {
       {/* ── Step 1: idle ── */}
       {step === 'idle' && (
         <div className="card space-y-5">
-          <p className="text-sm text-gray-500">
-            Upload a photo of a document or use your camera. Corners are detected automatically — drag them to adjust.
-          </p>
+          {pages.length > 0 ? (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600 font-medium">
+                Session active — {pages.length} page{pages.length !== 1 ? 's' : ''} scanned
+              </p>
+              <button
+                onClick={() => setStep('review')}
+                className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 transition-colors"
+              >
+                Back to pages
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Upload a photo of a document or use your camera. Corners are detected automatically — drag them to adjust.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => inputRef.current?.click()}
@@ -631,7 +724,11 @@ export default function DocumentScanner() {
       {step === 'adjust' && corners && (
         <div className="card space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-700">Drag corners to align with document edges</p>
+            <p className="text-sm font-semibold text-gray-700">
+              {pages.length > 0
+                ? `Page ${pages.length + 1} — drag corners to align`
+                : 'Drag corners to align with document edges'}
+            </p>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setCorners(detectCorners(imageCanvas))}
@@ -639,8 +736,11 @@ export default function DocumentScanner() {
               >
                 <Crosshair size={12} /> Re-detect
               </button>
-              <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                <RefreshCw size={12} /> Start over
+              <button
+                onClick={pages.length > 0 ? handleAddPage : handleReset}
+                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+              >
+                <X size={12} /> {pages.length > 0 ? 'Cancel' : 'Start over'}
               </button>
             </div>
           </div>
@@ -649,28 +749,15 @@ export default function DocumentScanner() {
             <CornerEditor imageCanvas={imageCanvas} corners={corners} onChange={setCorners} />
           </div>
 
-          <div className="grid grid-cols-2 gap-6 pt-1">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Enhancement</p>
-              <div className="space-y-2">
-                {[['bw', 'Black & White'], ['grayscale', 'Grayscale'], ['color', 'Color']].map(([v, l]) => (
-                  <label key={v} className="flex items-center gap-2.5 cursor-pointer group">
-                    <input type="radio" name="mode" value={v} checked={mode === v} onChange={() => setMode(v)} className="accent-indigo-600" />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{l}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Output format</p>
-              <div className="space-y-2">
-                {[['pdf', 'PDF document'], ['jpg', 'JPEG image']].map(([v, l]) => (
-                  <label key={v} className="flex items-center gap-2.5 cursor-pointer group">
-                    <input type="radio" name="format" value={v} checked={format === v} onChange={() => setFormat(v)} className="accent-indigo-600" />
-                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{l}</span>
-                  </label>
-                ))}
-              </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Enhancement</p>
+            <div className="flex gap-4">
+              {[['bw', 'Black & White'], ['grayscale', 'Grayscale'], ['color', 'Color']].map(([v, l]) => (
+                <label key={v} className="flex items-center gap-2 cursor-pointer group">
+                  <input type="radio" name="mode" value={v} checked={mode === v} onChange={() => setMode(v)} className="accent-indigo-600" />
+                  <span className="text-sm text-gray-700 group-hover:text-gray-900">{l}</span>
+                </label>
+              ))}
             </div>
           </div>
 
@@ -685,12 +772,105 @@ export default function DocumentScanner() {
               ? <><RefreshCw size={16} className="animate-spin" /> Uploading…</>
               : isProcessing
               ? <><RefreshCw size={16} className="animate-spin" /> Processing…</>
-              : <><Scan size={16} /> Scan Document</>}
+              : <><Scan size={16} /> Scan Page</>}
           </button>
         </div>
       )}
 
-      {/* ── Step 3: done ── */}
+      {/* ── Step 3: review pages ── */}
+      {step === 'review' && pages.length > 0 && (
+        <div className="card space-y-5">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-gray-800">
+              {pages.length} page{pages.length !== 1 ? 's' : ''} scanned
+            </h2>
+            <button
+              onClick={handleAddPage}
+              className="flex items-center gap-1.5 text-sm text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors shrink-0"
+            >
+              <Plus size={14} /> Add Page
+            </button>
+          </div>
+
+          {/* Page thumbnails */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {pages.map((page, idx) => (
+              <div key={page.id} className="relative group">
+                <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                  <img
+                    src={page.previewUrl}
+                    alt={`Page ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <p className="text-center text-xs text-gray-400 mt-1">{idx + 1}</p>
+                {/* hover/focus overlay: reorder + delete */}
+                <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {idx > 0 && (
+                    <button
+                      onClick={() => handleMovePage(page.id, -1)}
+                      title="Move up"
+                      className="w-6 h-6 bg-white rounded shadow text-gray-600 hover:text-indigo-600 flex items-center justify-center text-xs font-bold leading-none"
+                    >
+                      ↑
+                    </button>
+                  )}
+                  {idx < pages.length - 1 && (
+                    <button
+                      onClick={() => handleMovePage(page.id, 1)}
+                      title="Move down"
+                      className="w-6 h-6 bg-white rounded shadow text-gray-600 hover:text-indigo-600 flex items-center justify-center text-xs font-bold leading-none"
+                    >
+                      ↓
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleRemovePage(page.id)}
+                    title="Remove page"
+                    className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded shadow text-white flex items-center justify-center"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Export */}
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Export</p>
+            <JobStatus status={status} progress={progress} position={position} error={jobError} />
+            <div className="flex gap-3">
+              <button
+                onClick={handleExportPDF}
+                disabled={isProcessing}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                {isProcessing && jobType === 'combine'
+                  ? <><RefreshCw size={16} className="animate-spin" /> Building PDF…</>
+                  : <><FileText size={16} /> Export PDF</>}
+              </button>
+              <button
+                onClick={handleDownloadImages}
+                disabled={isProcessing}
+                className="btn-secondary flex-1 flex items-center justify-center gap-2"
+              >
+                {loading && jobType === 'page'
+                  ? <><RefreshCw size={16} className="animate-spin" /> Downloading…</>
+                  : <><Image size={16} /> Save Images</>}
+              </button>
+            </div>
+            <button
+              onClick={handleReset}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 py-1"
+            >
+              <RefreshCw size={11} /> Start new scan
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 4: done (PDF export complete) ── */}
       {step === 'done' && result && status === 'completed' && (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
@@ -698,7 +878,7 @@ export default function DocumentScanner() {
               <CheckCircle size={20} className="text-green-600" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Scan complete!</p>
+              <p className="font-semibold text-gray-800">Export complete!</p>
               <p className="text-sm text-gray-500">{result.filename}</p>
             </div>
           </div>
@@ -708,10 +888,10 @@ export default function DocumentScanner() {
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
-              <Download size={16} /> Download {format.toUpperCase()}
+              <Download size={16} /> Download PDF
             </button>
             <button onClick={handleReset} className="btn-secondary flex-1 flex items-center justify-center gap-2">
-              <RefreshCw size={16} /> Scan Another
+              <RefreshCw size={16} /> New Scan
             </button>
           </div>
         </div>
