@@ -142,10 +142,14 @@ function detectCorners(imgCanvas) {
     }
 
   // ── Sobel gradient ──
+  // Start at y/x=3 (inside the blurred zone). y=1 and y=pH-2 would read
+  // gb[0]/gb[pH-1] which are zero (never written by the 5×5 blur), creating
+  // a spurious ~pixel_value vs 0 gradient across the entire image edge that
+  // floods the Hough accumulator with false votes.
   const mag = new Float32Array(pW * pH);
   const angQ = new Uint8Array(pW * pH);
-  for (let y = 1; y < pH-1; y++)
-    for (let x = 1; x < pW-1; x++) {
+  for (let y = 3; y < pH-3; y++)
+    for (let x = 3; x < pW-3; x++) {
       const gx = -gb[(y-1)*pW+(x-1)]+gb[(y-1)*pW+(x+1)]-2*gb[y*pW+(x-1)]+2*gb[y*pW+(x+1)]-gb[(y+1)*pW+(x-1)]+gb[(y+1)*pW+(x+1)];
       const gy =  gb[(y-1)*pW+(x-1)]+2*gb[(y-1)*pW+x]+gb[(y-1)*pW+(x+1)]-gb[(y+1)*pW+(x-1)]-2*gb[(y+1)*pW+x]-gb[(y+1)*pW+(x+1)];
       mag[y*pW+x] = Math.sqrt(gx*gx + gy*gy);
@@ -155,8 +159,8 @@ function detectCorners(imgCanvas) {
 
   // ── Non-maximum suppression ──
   const nms = new Float32Array(pW * pH);
-  for (let y = 1; y < pH-1; y++)
-    for (let x = 1; x < pW-1; x++) {
+  for (let y = 3; y < pH-3; y++)
+    for (let x = 3; x < pW-3; x++) {
       const m = mag[y*pW+x]; let q, r;
       switch (angQ[y*pW+x]) {
         case 0: q=mag[y*pW+x+1];       r=mag[y*pW+x-1];        break;
