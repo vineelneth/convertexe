@@ -516,24 +516,12 @@ function CameraCapture({ onCapture, onClose }) {
   const capture = () => {
     const v = videoRef.current;
     const c = document.createElement('canvas');
-    const currentZoom = zoomRef.current;
-    if (!hwZoom && currentZoom > 1) {
-      // CSS zoom: crop the center region that matches what the user sees
-      const w = Math.round(v.videoWidth / currentZoom);
-      const h = Math.round(v.videoHeight / currentZoom);
-      const sx = Math.round((v.videoWidth - w) / 2);
-      const sy = Math.round((v.videoHeight - h) / 2);
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(v, sx, sy, w, h, 0, 0, w, h);
-    } else {
-      c.width = v.videoWidth; c.height = v.videoHeight;
-      c.getContext('2d').drawImage(v, 0, 0);
-    }
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     onCapture(c);
   };
 
-  // For CSS zoom: scale the video element; hardware zoom shows already-zoomed feed
   const cssScale = hwZoom ? 1 : zoom;
 
   return (
