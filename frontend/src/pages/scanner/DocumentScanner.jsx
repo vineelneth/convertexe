@@ -458,7 +458,7 @@ function CameraCapture({ onCapture, onClose }) {
 
   const applyZoom = async (newZoom) => {
     const max = hwZoom ? hwZoomMax : 5;
-    const clamped = Math.max(0.5, Math.min(max, newZoom));
+    const clamped = Math.max(1, Math.min(max, newZoom));
     zoomRef.current = clamped;
     setZoom(clamped);
     if (hwZoom) {
@@ -490,7 +490,7 @@ function CameraCapture({ onCapture, onClose }) {
         pinchStart.current = { dist, zoom: zoomRef.current };
       } else {
         const newZoom = pinchStart.current.zoom * (dist / pinchStart.current.dist);
-        applyZoom(Math.max(0.5, newZoom));
+        applyZoom(Math.max(1, newZoom));
       }
     }
   };
@@ -590,7 +590,7 @@ function CameraCapture({ onCapture, onClose }) {
         </div>
 
         {/* Zoom level badge */}
-        {Math.abs(zoom - 1) > 0.05 && (
+        {zoom > 1.05 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm font-medium px-3 py-1 rounded-full pointer-events-none">
             {zoom.toFixed(1)}×
           </div>
@@ -601,7 +601,7 @@ function CameraCapture({ onCapture, onClose }) {
       <div className="shrink-0 bg-gradient-to-t from-black/80 to-transparent px-6 pb-10 pt-6 space-y-5">
         {/* Zoom presets */}
         <div className="flex justify-center gap-5">
-          {[0.5, 1, 2, 3].map(z => (
+          {[1, 2, 3].map(z => (
             <button
               key={z}
               onClick={() => applyZoom(z)}
