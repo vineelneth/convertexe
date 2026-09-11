@@ -416,7 +416,9 @@ function CameraCapture({ onCapture, onClose }) {
   const [facing, setFacing] = useState('environment');
   const [zoom, setZoom] = useState(1);
   const [hwZoom, setHwZoom] = useState(false);
+  const [hwZoomMin, setHwZoomMin] = useState(1);
   const [hwZoomMax, setHwZoomMax] = useState(4);
+  const [supportsWide, setSupportsWide] = useState(false); // device zoom goes below 1
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const zoomRef = useRef(1);
@@ -430,6 +432,7 @@ function CameraCapture({ onCapture, onClose }) {
       setReady(false); setErr('');
       setZoom(1); zoomRef.current = 1;
       setTorchOn(false); setTorchSupported(false); setHwZoom(false);
+      setHwZoomMin(1); setHwZoomMax(4); setSupportsWide(false);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } }
@@ -439,9 +442,19 @@ function CameraCapture({ onCapture, onClose }) {
         videoRef.current.srcObject = stream;
         const track = stream.getVideoTracks()[0];
         const caps = track.getCapabilities?.() ?? {};
-        if (caps.zoom && caps.zoom.max > 1) {
+        if (caps.zoom) {
           setHwZoom(true);
-          setHwZoomMax(Math.min(caps.zoom.max, 8));
+          const zMin = caps.zoom.min ?? 1;
+          const zMax = Math.min(caps.zoom.max ?? 4, 8);
+          setHwZoomMin(zMin);
+          setHwZoomMax(zMax);
+          // If device supports sub-1 zoom, it has a wide-angle range
+          if (zMin < 0.8) setSupportsWide(true);
+          // Always start at the widest available zoom
+          if (zMin !== 1) {
+            track.applyConstraints({ advanced: [{ zoom: zMin }] }).catch(() => {});
+            setZoom(zMin); zoomRef.current = zMin;
+          }
         }
         if (caps.torch) setTorchSupported(true);
         setReady(true);
@@ -456,9 +469,10 @@ function CameraCapture({ onCapture, onClose }) {
     };
   }, [facing]);
 
-  const applyZoom = async (newZoom) => {
+  const applyZoom = (newZoom) => {
+    const min = hwZoom ? hwZoomMin : 1;
     const max = hwZoom ? hwZoomMax : 5;
-    const clamped = Math.max(1, Math.min(max, newZoom));
+    const clamped = Math.max(min, Math.min(max, newZoom));
     zoomRef.current = clamped;
     setZoom(clamped);
     if (hwZoom) {
@@ -490,7 +504,7 @@ function CameraCapture({ onCapture, onClose }) {
         pinchStart.current = { dist, zoom: zoomRef.current };
       } else {
         const newZoom = pinchStart.current.zoom * (dist / pinchStart.current.dist);
-        applyZoom(Math.max(1, newZoom));
+        applyZoom(newZoom);
       }
     }
   };
@@ -590,7 +604,7 @@ function CameraCapture({ onCapture, onClose }) {
         </div>
 
         {/* Zoom level badge */}
-        {zoom > 1.05 && (
+        {Math.abs(zoom - 1) > 0.05 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-sm font-medium px-3 py-1 rounded-full pointer-events-none">
             {zoom.toFixed(1)}×
           </div>
@@ -601,7 +615,7 @@ function CameraCapture({ onCapture, onClose }) {
       <div className="shrink-0 bg-gradient-to-t from-black/80 to-transparent px-6 pb-10 pt-6 space-y-5">
         {/* Zoom presets */}
         <div className="flex justify-center gap-5">
-          {[1, 2, 3].map(z => (
+          {[...(supportsWide ? [0.5] : []), 1, 2, 3].map(z => (
             <button
               key={z}
               onClick={() => applyZoom(z)}
