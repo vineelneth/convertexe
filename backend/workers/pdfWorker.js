@@ -403,66 +403,29 @@ const pdfWorker = new Worker('pdf', async (job) => {
     let imgBuf, imgWidth, imgHeight;
 
     if (mode === 'bw') {
-      // Step 1: Rotate, grayscale, global normalise
-      const { data: rawGray, info: gi } = await sharp(imagePath)
-        .rotate().grayscale().normalise()
+      // Sharpen first so text edges are crisp before thresholding.
+      // Adaptive threshold: each pixel vs local blur average — shadows don't go all-black.
+      const { data: sharpRaw, info: gi } = await sharp(imagePath)
+        .rotate().grayscale().normalise().sharpen({ sigma: 1.0, m1: 1.5, m2: 20 })
         .raw().toBuffer({ resolveWithObject: true });
-      const W = gi.width, H = gi.height;
-
-      // Step 2: Estimate illumination via large Gaussian blur (removes local content, keeps shadows)
-      const bigSigma = Math.max(40, Math.min(120, Math.round(W * 0.06)));
-      const { data: illum } = await sharp(rawGray, { raw: { width: W, height: H, channels: 1 } })
-        .blur(bigSigma).raw().toBuffer({ resolveWithObject: true });
-
-      // Step 3: Divide by illumination field → shadow/uneven-light correction
-      const corrected = Buffer.alloc(rawGray.length);
-      for (let i = 0; i < rawGray.length; i++) {
-        const ill = Math.max(illum[i], 30);
-        corrected[i] = Math.min(255, Math.round(rawGray[i] * 220 / ill));
+      const blurSigma = Math.max(15, Math.min(60, Math.round(gi.width * 0.03)));
+      const { data: blurRaw } = await sharp(sharpRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
+        .blur(blurSigma).raw().toBuffer({ resolveWithObject: true });
+      const bwRaw = Buffer.alloc(sharpRaw.length);
+      for (let i = 0; i < sharpRaw.length; i++) {
+        bwRaw[i] = sharpRaw[i] >= blurRaw[i] * 0.80 ? 255 : 0;
       }
-
-      // Step 4: Light sharpening — m2=8 avoids halos (was m2=20), sigma=0.8 keeps edges crisp
-      const { data: sharpened } = await sharp(corrected, { raw: { width: W, height: H, channels: 1 } })
-        .sharpen({ sigma: 0.8, m1: 1.2, m2: 8 }).raw().toBuffer({ resolveWithObject: true });
-
-      // Step 5: Adaptive binarization — pixel vs local mean (2.5% window)
-      const medSigma = Math.max(10, Math.min(50, Math.round(W * 0.025)));
-      const { data: localMean } = await sharp(sharpened, { raw: { width: W, height: H, channels: 1 } })
-        .blur(medSigma).raw().toBuffer({ resolveWithObject: true });
-
-      // Step 6: Threshold at 85% of local mean — preserves thin strokes (was 80%)
-      const bwRaw = Buffer.alloc(sharpened.length);
-      for (let i = 0; i < sharpened.length; i++) {
-        bwRaw[i] = sharpened[i] >= localMean[i] * 0.85 ? 255 : 0;
-      }
-
-      const result = await sharp(bwRaw, { raw: { width: W, height: H, channels: 1 } })
+      const result = await sharp(bwRaw, { raw: { width: gi.width, height: gi.height, channels: 1 } })
         .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
-      imgBuf = result.data; imgWidth = W; imgHeight = H;
+      imgBuf = result.data; imgWidth = gi.width; imgHeight = gi.height;
     } else if (mode === 'grayscale') {
-      const { data: rawGray, info: gi } = await sharp(imagePath)
-        .rotate().grayscale().normalise()
-        .raw().toBuffer({ resolveWithObject: true });
-      const W = gi.width, H = gi.height;
-
-      // Illumination correction for even, shadow-free output
-      const bigSigma = Math.max(40, Math.min(120, Math.round(W * 0.06)));
-      const { data: illum } = await sharp(rawGray, { raw: { width: W, height: H, channels: 1 } })
-        .blur(bigSigma).raw().toBuffer({ resolveWithObject: true });
-      const corrected = Buffer.alloc(rawGray.length);
-      for (let i = 0; i < rawGray.length; i++) {
-        const ill = Math.max(illum[i], 30);
-        corrected[i] = Math.min(255, Math.round(rawGray[i] * 220 / ill));
-      }
-
-      const { data, info } = await sharp(corrected, { raw: { width: W, height: H, channels: 1 } })
-        .sharpen({ sigma: 0.6, m1: 0.5, m2: 4 })
+      const { data, info } = await sharp(imagePath).rotate().grayscale().normalise()
+        .sharpen({ sigma: 0.8, m1: 0.5, m2: 5 })
         .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
       imgBuf = data; imgWidth = info.width; imgHeight = info.height;
     } else {
       const { data, info } = await sharp(imagePath).rotate().normalise()
-        .modulate({ saturation: 1.15, brightness: 1.02 })
-        .sharpen({ sigma: 0.6, m1: 0.5, m2: 4 })
+        .modulate({ saturation: 1.1 }).sharpen({ sigma: 0.8, m1: 0.5, m2: 5 })
         .jpeg({ quality: 95 }).toBuffer({ resolveWithObject: true });
       imgBuf = data; imgWidth = info.width; imgHeight = info.height;
     }
