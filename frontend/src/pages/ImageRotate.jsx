@@ -67,17 +67,17 @@ export default function ImageRotate() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-          <RotateCw size={20} className="text-emerald-600" />
+        <div className="w-10 h-10 bg-emerald-900/40 rounded-xl flex items-center justify-center">
+          <RotateCw size={20} className="text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Rotate & Flip</h1>
-          <p className="text-gray-500 text-sm">Rotate or flip your images</p>
+          <h1 className="text-2xl font-bold text-white">Rotate & Flip</h1>
+          <p className="text-slate-400 text-sm">Rotate or flip your images</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="flex items-center gap-2 bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           {error}
         </div>
       )}
@@ -85,23 +85,23 @@ export default function ImageRotate() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Transform complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Transform complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Original size</p>
-              <p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p>
+              <p className="text-xs text-slate-400 mb-1">Original size</p>
+              <p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Output size</p>
-              <p className="font-semibold text-green-700">{formatBytes(result.size)}</p>
+              <p className="text-xs text-slate-400 mb-1">Output size</p>
+              <p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export default function ImageRotate() {
 
           {/* Rotation */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Rotation:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Rotation:</p>
             <div className="flex gap-2 flex-wrap">
               {[
                 { label: 'No rotation', val: 0 },
@@ -146,7 +146,7 @@ export default function ImageRotate() {
 
           {/* Flip */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Flip:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Flip:</p>
             <div className="flex gap-2 flex-wrap">
               {[
                 { label: 'No flip', val: '' },

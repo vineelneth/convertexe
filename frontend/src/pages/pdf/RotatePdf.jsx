@@ -50,21 +50,21 @@ export default function RotatePdf() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><RotateCw size={20} className="text-red-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Rotate Pages</h1><p className="text-gray-500 text-sm">Rotate PDF pages to the correct orientation</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><RotateCw size={20} className="text-rose-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">Rotate Pages</h1><p className="text-slate-400 text-sm">Rotate PDF pages to the correct orientation</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">Pages rotated!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">Pages rotated!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">New size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">New size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -82,7 +82,7 @@ export default function RotatePdf() {
           />
 
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">Rotation angle</p>
+            <p className="text-sm font-semibold text-slate-300 mb-2">Rotation angle</p>
             <div className="flex gap-2">
               {[90, 180, 270].map(a => (
                 <button
@@ -97,7 +97,7 @@ export default function RotatePdf() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-2">Apply to</p>
+            <p className="text-sm font-semibold text-slate-300 mb-2">Apply to</p>
             <div className="flex gap-2">
               {[{ value: 'all', label: 'All pages' }, { value: 'specific', label: 'Specific pages' }].map(opt => (
                 <button
@@ -113,13 +113,13 @@ export default function RotatePdf() {
 
           {pageMode === 'specific' && (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Page numbers</label>
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Page numbers</label>
               <input
                 type="text"
                 value={pageNumbers}
                 onChange={(e) => setPageNumbers(e.target.value)}
                 placeholder="e.g. 1, 3, 5-7"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
           )}

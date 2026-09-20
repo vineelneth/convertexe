@@ -83,17 +83,17 @@ export default function ImageResizer() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
-          <Maximize2 size={20} className="text-teal-600" />
+        <div className="w-10 h-10 bg-teal-900/40 rounded-xl flex items-center justify-center">
+          <Maximize2 size={20} className="text-teal-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Image Resizer</h1>
-          <p className="text-gray-500 text-sm">Resize images to any dimension</p>
+          <h1 className="text-2xl font-bold text-white">Image Resizer</h1>
+          <p className="text-slate-400 text-sm">Resize images to any dimension</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="flex items-center gap-2 bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           {error}
         </div>
       )}
@@ -101,23 +101,23 @@ export default function ImageResizer() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Resize complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Resize complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Original size</p>
-              <p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p>
+              <p className="text-xs text-slate-400 mb-1">Original size</p>
+              <p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">New size</p>
-              <p className="font-semibold text-green-700">{formatBytes(result.size)}</p>
+              <p className="text-xs text-slate-400 mb-1">New size</p>
+              <p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p>
             </div>
           </div>
 
@@ -141,13 +141,13 @@ export default function ImageResizer() {
 
           {/* Presets */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Presets:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Presets:</p>
             <div className="grid grid-cols-2 gap-2">
               {PRESETS.map(p => (
                 <button
                   key={p.label}
                   onClick={() => applyPreset(p)}
-                  className="text-left text-xs px-3 py-2 border rounded-lg hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-gray-600 border-gray-200"
+                  className="text-left text-xs px-3 py-2 border rounded-lg hover:border-indigo-500 hover:bg-indigo-950/40 hover:text-indigo-400 transition-colors text-slate-400 border-slate-700"
                 >
                   {p.label}
                 </button>
@@ -157,27 +157,27 @@ export default function ImageResizer() {
 
           {/* Custom dimensions */}
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Custom dimensions:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Custom dimensions:</p>
             <div className="flex gap-3 items-center">
               <div className="flex-1">
-                <label className="text-xs text-gray-500 mb-1 block">Width (px)</label>
+                <label className="text-xs text-slate-400 mb-1 block">Width (px)</label>
                 <input
                   type="number"
                   value={width}
                   onChange={(e) => setWidth(e.target.value)}
                   placeholder="e.g. 1920"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 />
               </div>
-              <div className="text-gray-400 mt-5 font-bold">×</div>
+              <div className="text-slate-500 mt-5 font-bold">×</div>
               <div className="flex-1">
-                <label className="text-xs text-gray-500 mb-1 block">Height (px)</label>
+                <label className="text-xs text-slate-400 mb-1 block">Height (px)</label>
                 <input
                   type="number"
                   value={height}
                   onChange={(e) => setHeight(e.target.value)}
                   placeholder="e.g. 1080"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 />
               </div>
             </div>
@@ -187,11 +187,11 @@ export default function ImageResizer() {
           <label className="flex items-center gap-3 cursor-pointer">
             <div
               onClick={() => setMaintainAspect(!maintainAspect)}
-              className={`w-10 h-6 rounded-full transition-colors relative ${maintainAspect ? 'bg-indigo-600' : 'bg-gray-200'}`}
+              className={`w-10 h-6 rounded-full transition-colors relative ${maintainAspect ? 'bg-indigo-600' : 'bg-slate-700'}`}
             >
               <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${maintainAspect ? 'translate-x-5' : 'translate-x-1'}`} />
             </div>
-            <span className="text-sm text-gray-700 font-medium">Maintain aspect ratio</span>
+            <span className="text-sm text-slate-300 font-medium">Maintain aspect ratio</span>
           </label>
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />
