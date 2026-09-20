@@ -7,11 +7,6 @@ import ImageCompressor from './pages/ImageCompressor';
 import ImageResizer from './pages/ImageResizer';
 import ImageRotate from './pages/ImageRotate';
 import ImageGrayscale from './pages/ImageGrayscale';
-import AudioConverter from './pages/AudioConverter';
-import AudioCompressor from './pages/AudioCompressor';
-import AudioTrimmer from './pages/AudioTrimmer';
-import AudioFade from './pages/AudioFade';
-import AudioNormalize from './pages/AudioNormalize';
 import ImagesToPdf from './pages/pdf/ImagesToPdf';
 import MergePdf from './pages/pdf/MergePdf';
 import SplitPdf from './pages/pdf/SplitPdf';
@@ -32,11 +27,6 @@ export default function App() {
         <Route path="/image/resize" element={<ImageResizer />} />
         <Route path="/image/rotate" element={<ImageRotate />} />
         <Route path="/image/grayscale" element={<ImageGrayscale />} />
-        <Route path="/audio/convert" element={<AudioConverter />} />
-        <Route path="/audio/compress" element={<AudioCompressor />} />
-        <Route path="/audio/trim" element={<AudioTrimmer />} />
-        <Route path="/audio/fade" element={<AudioFade />} />
-        <Route path="/audio/normalize" element={<AudioNormalize />} />
         <Route path="/pdf/images-to-pdf" element={<ImagesToPdf />} />
         <Route path="/pdf/merge" element={<MergePdf />} />
         <Route path="/pdf/split" element={<SplitPdf />} />

@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Image, Minimize2, Maximize2, RotateCw, Contrast,
-  Music, Volume2, Activity,
   Shield, Zap, Star, Globe,
   ImagePlus, FilePlus2, Scissors, Trash2, PackageOpen, Lock, Unlock, PenLine, FileImage,
 } from 'lucide-react';
@@ -19,29 +18,6 @@ const featureGroups = [
       { icon: Maximize2, title: 'Image Resizer',    desc: 'Resize images to exact pixel dimensions. Lock the aspect ratio to avoid distortion, or stretch to fill any custom size.',           to: '/image/resize',    grad: 'from-teal-500 to-teal-600' },
       { icon: RotateCw,  title: 'Rotate & Flip',    desc: 'Rotate images 90°, 180°, or 270°, or mirror them horizontally and vertically to fix orientation in seconds.',                      to: '/image/rotate',    grad: 'from-emerald-500 to-emerald-600' },
       { icon: Contrast,  title: 'Grayscale',         desc: 'Transform any color photo into a clean black-and-white image. Great for documents, prints, or artistic effects.',                  to: '/image/grayscale', grad: 'from-slate-500 to-slate-600' },
-    ],
-  },
-  {
-    label: 'Audio Tools',
-    id: 'audio-tools',
-    accent: 'violet',
-    headerGrad: 'from-violet-500 to-purple-500',
-    tools: [
-      { icon: Music,    title: 'Audio Converter',   desc: 'Convert audio files between MP3, WAV, AAC, FLAC, OGG, M4A, OPUS, WMA, and 30+ other formats for any device or platform.',                          to: '/audio/convert',   grad: 'from-violet-500 to-violet-600' },
-      { icon: Volume2,  title: 'Audio Compressor',  desc: 'Reduce audio file size by lowering the bitrate. Set a custom target size in KB or pick a bitrate from 32 kbps to 320 kbps.',                     to: '/audio/compress',  grad: 'from-purple-500 to-purple-600' },
-      { icon: Scissors, title: 'Audio Trimmer',     desc: 'Cut your audio to a precise start and end time. Keep only the part you need and discard the rest — great for clips and intros.',                   to: '/audio/trim',      grad: 'from-fuchsia-500 to-violet-600' },
-      { icon: Activity, title: 'Normalize Audio',   desc: 'Balance the loudness of your audio to a consistent level using the EBU R128 standard. Choose a preset for YouTube, Spotify, or broadcast.',       to: '/audio/normalize', grad: 'from-indigo-500 to-violet-500' },
-      {
-        icon: ({ size, className }) => (
-          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-            <path d="M2 12h2l3-8 4 16 3-10 2 6h6" />
-          </svg>
-        ),
-        title: 'Audio Fade',
-        desc: 'Add a smooth fade-in at the start and a fade-out at the end of any audio file. Set the duration in seconds using simple sliders.',
-        to: '/audio/fade',
-        grad: 'from-purple-500 to-fuchsia-500',
-      },
     ],
   },
   {
@@ -65,7 +41,7 @@ const featureGroups = [
 ];
 
 const stats = [
-  { icon: Star,   label: '20 Tools',      sub: 'Ready to use' },
+  { icon: Star,   label: '15 Tools',      sub: 'Ready to use' },
   { icon: Globe,  label: '35+ Formats',   sub: 'Supported' },
   { icon: Shield, label: 'Private',       sub: 'Files auto-deleted' },
 ];
@@ -105,13 +81,12 @@ export default function Home() {
           </p>
 
           <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed">
-            All your image, audio, and PDF tools in one place — free, instant, and completely private.
+            All your image and PDF tools in one place — free, instant, and completely private.
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
             {[
               { id: 'image-tools',   icon: Image,     label: 'Image Tools', grad: 'from-blue-500 to-cyan-500' },
-              { id: 'audio-tools',   icon: Music,     label: 'Audio Tools', grad: 'from-violet-500 to-purple-500' },
               { id: 'pdf-tools',     icon: FileImage, label: 'PDF Tools',   grad: 'from-rose-500 to-orange-500' },
             ].map(({ id, icon: Icon, label, grad }) => (
               <button

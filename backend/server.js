@@ -21,7 +21,6 @@ const uploadLimiter = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api/image',   uploadLimiter);
-app.use('/api/audio',   uploadLimiter);
 app.use('/api/pdf',     uploadLimiter);
 
 // Generous limit on download/preview/jobs to prevent hammering
@@ -64,7 +63,6 @@ try {
 
 // Routes
 app.use('/api/image',   require('./routes/imageRoutes'));
-app.use('/api/audio',   require('./routes/audioRoutes'));
 app.use('/api/pdf',     require('./routes/pdfRoutes'));
 app.use('/api/jobs',    require('./routes/jobRoutes'));
 
@@ -95,7 +93,6 @@ app.get('/api/download/:filename', (req, res) => {
 
 // Start workers
 require('./workers/imageWorker');
-require('./workers/audioWorker');
 require('./workers/pdfWorker');
 
 // Cleanup orphaned upload files older than 2 hours
@@ -132,5 +129,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Workers started: image (×8), audio (×4)`);
+  console.log(`Workers started: image (×8), pdf`);
 });
