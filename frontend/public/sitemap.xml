@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://convertexe.onrender.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://convertexe.onrender.com/image/convert</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/image/compress</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/image/resize</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/image/rotate</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/image/grayscale</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/audio/convert</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/audio/compress</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/audio/trim</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/audio/fade</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/audio/normalize</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/images-to-pdf</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/merge</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/split</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/rotate</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/delete-pages</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/compress</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/protect</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/watermark</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/to-images</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/pdf/unlock</loc><priority>0.8</priority></url>
+  <url><loc>https://convertexe.onrender.com/scanner</loc><priority>0.8</priority></url>
+</urlset>
