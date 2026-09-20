@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Image, Minimize2, Maximize2, RotateCw, Contrast,
   Music, Volume2, Activity,
-  Shield, Zap, Star, Globe, ScanLine,
+  Shield, Zap, Star, Globe,
   ImagePlus, FilePlus2, Scissors, Trash2, PackageOpen, Lock, Unlock, PenLine, FileImage,
 } from 'lucide-react';
 
@@ -62,19 +62,10 @@ const featureGroups = [
       { icon: Unlock,      title: 'Unlock PDF',        desc: 'Remove password protection from a PDF you own. Enter the correct password and get back an unlocked, freely accessible file.',  to: '/pdf/unlock',        grad: 'from-green-500 to-emerald-500' },
     ],
   },
-  {
-    label: 'Scanner',
-    id: 'scanner-tools',
-    accent: 'indigo',
-    headerGrad: 'from-indigo-500 to-violet-500',
-    tools: [
-      { icon: ScanLine, title: 'Document Scanner', desc: 'Photograph a document and auto-detect its edges. Correct perspective, choose B&W or color, and export as a PDF or JPEG.', to: '/scanner', grad: 'from-indigo-500 to-violet-600' },
-    ],
-  },
 ];
 
 const stats = [
-  { icon: Star,   label: '21 Tools',      sub: 'Ready to use' },
+  { icon: Star,   label: '20 Tools',      sub: 'Ready to use' },
   { icon: Globe,  label: '35+ Formats',   sub: 'Supported' },
   { icon: Shield, label: 'Private',       sub: 'Files auto-deleted' },
 ];
@@ -122,7 +113,6 @@ export default function Home() {
               { id: 'image-tools',   icon: Image,     label: 'Image Tools', grad: 'from-blue-500 to-cyan-500' },
               { id: 'audio-tools',   icon: Music,     label: 'Audio Tools', grad: 'from-violet-500 to-purple-500' },
               { id: 'pdf-tools',     icon: FileImage, label: 'PDF Tools',   grad: 'from-rose-500 to-orange-500' },
-              { id: 'scanner-tools', icon: ScanLine,  label: 'Scanner',     grad: 'from-indigo-500 to-violet-500' },
             ].map(({ id, icon: Icon, label, grad }) => (
               <button
                 key={id}

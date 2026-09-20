@@ -23,7 +23,6 @@ const uploadLimiter = rateLimit({
 app.use('/api/image',   uploadLimiter);
 app.use('/api/audio',   uploadLimiter);
 app.use('/api/pdf',     uploadLimiter);
-app.use('/api/scanner', uploadLimiter);
 
 // Generous limit on download/preview/jobs to prevent hammering
 const downloadLimiter = rateLimit({
@@ -67,7 +66,6 @@ try {
 app.use('/api/image',   require('./routes/imageRoutes'));
 app.use('/api/audio',   require('./routes/audioRoutes'));
 app.use('/api/pdf',     require('./routes/pdfRoutes'));
-app.use('/api/scanner', require('./routes/scannerRoutes'));
 app.use('/api/jobs',    require('./routes/jobRoutes'));
 
 // Preview endpoint — serves file inline for <img> tags, no deletion
