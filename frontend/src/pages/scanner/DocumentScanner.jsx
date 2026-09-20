@@ -227,6 +227,17 @@ function detectCorners(imgCanvas) {
     const w = Math.max(Math.hypot(tr[0]-tl[0],tr[1]-tl[1]), Math.hypot(br[0]-bl[0],br[1]-bl[1]));
     const h = Math.max(Math.hypot(bl[0]-tl[0],bl[1]-tl[1]), Math.hypot(br[0]-tr[0],br[1]-tr[1]));
     if (w < pW*0.20 || h < pH*0.20) return -1;
+    // Rectangularity: reject quads where any interior angle deviates too far
+    // from 90° — catches diagonal / skewed wrong-line combos (|cos| > 0.65
+    // means the corner angle is outside ~49°–131°, never a real document).
+    for (let i = 0; i < 4; i++) {
+      const [px, py] = quad[i];
+      const [ax, ay] = quad[(i+1) % 4];
+      const [bx, by] = quad[(i+3) % 4];
+      const v1x = ax-px, v1y = ay-py, v2x = bx-px, v2y = by-py;
+      const mag = Math.sqrt((v1x*v1x+v1y*v1y)*(v2x*v2x+v2y*v2y));
+      if (mag > 0 && Math.abs((v1x*v2x+v1y*v2y)/mag) > 0.65) return -1;
+    }
     return area;
   }
 
@@ -273,7 +284,11 @@ function detectCorners(imgCanvas) {
     }
   }
   peaks.sort((a, b) => b.v - a.v);
-  const lines = peaks.slice(0, 20);
+  // Angular diversification: cap at 4 peaks per 30° band so vertical document
+  // edges survive even when ruled-paper horizontal lines dominate the accumulator.
+  const angBands = Array.from({ length: 6 }, () => []);
+  for (const p of peaks) angBands[Math.floor(p.t / 30) % 6].push(p);
+  const lines = angBands.flatMap(b => b.slice(0, 4)).sort((a, b) => b.v - a.v);
 
   // ── Find best quadrilateral from Hough lines ──
   // Seek 2 pairs of (a) mutually parallel lines that are (b) perpendicular
@@ -293,7 +308,7 @@ function detectCorners(imgCanvas) {
   }
 
   let bestQuad = null, bestScore = -1;
-  const N = Math.min(lines.length, 12);
+  const N = Math.min(lines.length, 16);
   const margin = Math.max(pW, pH) * 0.25;
 
   for (let a = 0; a < N; a++) {
