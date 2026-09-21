@@ -33,14 +33,14 @@ function SortDropdown({ value, onChange, options, hasExif }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="flex items-center gap-1.5 text-xs border border-slate-700 rounded-lg px-2.5 py-1.5 bg-slate-800 text-slate-200 hover:border-indigo-500 hover:bg-indigo-950/40 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
         <span>{selected?.label}</span>
-        <ChevronDown size={12} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px]">
+        <div className="absolute right-0 top-full mt-1 z-30 bg-slate-800 border border-slate-700 rounded-xl shadow-lg py-1 min-w-[200px]">
           {options.map(opt => {
             const disabled = opt.needsExif && !hasExif;
             const active = opt.value === value;
@@ -51,10 +51,10 @@ function SortDropdown({ value, onChange, options, hasExif }) {
                 disabled={disabled}
                 onClick={() => { if (!disabled) { onChange(opt.value); setOpen(false); } }}
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left transition-colors
-                  ${disabled ? 'text-gray-300 cursor-not-allowed' : active ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  ${disabled ? 'text-slate-600 cursor-not-allowed' : active ? 'bg-indigo-950/60 text-indigo-300 font-medium' : 'text-slate-300 hover:bg-slate-700/50'}`}
               >
                 <span>{opt.label}{disabled ? ' (no EXIF)' : ''}</span>
-                {active && <Check size={12} className="text-indigo-600 shrink-0" />}
+                {active && <Check size={12} className="text-indigo-400 shrink-0" />}
               </button>
             );
           })}
@@ -68,8 +68,8 @@ function SortableItem({ item, index, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <div ref={setNodeRef} style={style} className="relative bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-      <div className="aspect-square overflow-hidden bg-gray-100">
+    <div ref={setNodeRef} style={style} className="relative bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-sm">
+      <div className="aspect-square overflow-hidden bg-slate-800">
         <img src={item.preview} alt={item.file.name} className="w-full h-full object-cover" />
       </div>
       <div className="absolute top-1 left-1 w-6 h-6 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center shadow">
@@ -86,10 +86,10 @@ function SortableItem({ item, index, onRemove }) {
         {...listeners}
         className="absolute bottom-1 right-1 w-6 h-6 bg-white/80 rounded flex items-center justify-center cursor-grab active:cursor-grabbing shadow"
       >
-        <GripVertical size={14} className="text-gray-500" />
+        <GripVertical size={14} className="text-slate-500" />
       </div>
       <div className="px-2 py-1.5">
-        <p className="text-xs text-gray-600 truncate">{item.file.name}</p>
+        <p className="text-xs text-slate-400 truncate">{item.file.name}</p>
       </div>
     </div>
   );
@@ -239,21 +239,21 @@ export default function ImagesToPdf() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><ImagePlus size={20} className="text-red-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Images to PDF</h1><p className="text-gray-500 text-sm">Combine multiple images into a single PDF</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><ImagePlus size={20} className="text-rose-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">Images to PDF</h1><p className="text-slate-400 text-sm">Combine multiple images into a single PDF</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">PDF created!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">PDF created!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">PDF size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">PDF size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download PDF</button>
@@ -268,21 +268,21 @@ export default function ImagesToPdf() {
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center py-8 gap-2
-              ${draggingOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'}`}
+              ${draggingOver ? 'border-indigo-500 bg-indigo-950/40' : 'border-slate-700 bg-slate-800/50 hover:border-indigo-500 hover:bg-indigo-950/40'}`}
           >
-            <Upload size={28} className={draggingOver ? 'text-indigo-600' : 'text-gray-400'} />
-            <p className="font-semibold text-gray-700">Drag & drop images here</p>
-            <p className="text-gray-400 text-sm">or <span className="text-indigo-600 font-medium">click to browse</span></p>
-            <p className="text-xs text-gray-400">JPG, PNG, WebP, AVIF, HEIC, GIF, BMP, TIFF, SVG</p>
+            <Upload size={28} className={draggingOver ? 'text-indigo-400' : 'text-slate-500'} />
+            <p className="font-semibold text-slate-300">Drag & drop images here</p>
+            <p className="text-slate-400 text-sm">or <span className="text-indigo-400 font-medium">click to browse</span></p>
+            <p className="text-xs text-slate-500">JPG, PNG, WebP, AVIF, HEIC, GIF, BMP, TIFF, SVG</p>
             <input ref={inputRef} type="file" multiple accept=".jpeg,.jpg,.png,.webp,.gif,.bmp,.tiff,.tif,.avif,.heic,.heif,.svg" className="hidden" onChange={handleFileInput} />
           </div>
 
           {files.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-700 shrink-0">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
+                <p className="text-sm font-semibold text-slate-300 shrink-0">{files.length} image{files.length !== 1 ? 's' : ''} selected</p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-500 shrink-0">Sort by</label>
+                  <label className="text-xs text-slate-400 shrink-0">Sort by</label>
                   <SortDropdown
                     value={sortMode}
                     onChange={handleSortChange}

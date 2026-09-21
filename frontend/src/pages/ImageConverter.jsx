@@ -60,17 +60,17 @@ export default function ImageConverter() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-          <Image size={20} className="text-blue-600" />
+        <div className="w-10 h-10 bg-blue-900/40 rounded-xl flex items-center justify-center">
+          <Image size={20} className="text-blue-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Image Converter</h1>
-          <p className="text-gray-500 text-sm">Convert between JPG, PNG, WebP, AVIF, HEIC, SVG and more</p>
+          <h1 className="text-2xl font-bold text-white">Image Converter</h1>
+          <p className="text-slate-400 text-sm">Convert between JPG, PNG, WebP, AVIF, HEIC, SVG and more</p>
         </div>
       </div>
 
       {(error || jobError) && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           {error || jobError}
         </div>
       )}
@@ -78,17 +78,17 @@ export default function ImageConverter() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Conversion complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Conversion complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">New size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">New size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -106,11 +106,11 @@ export default function ImageConverter() {
           />
 
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Convert to:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Convert to:</p>
             <div className="space-y-3">
               {FORMAT_GROUPS.map(group => (
                 <div key={group.label}>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{group.label}</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{group.label}</p>
                   <div className="flex flex-wrap gap-2">
                     {group.formats.map(f => (
                       <button key={f} onClick={() => setFormat(f)}

@@ -32,10 +32,10 @@ export default function FileDropzone({ file, onFileChange, accept, label, suppor
       onDrop={handleDrop}
       className={`relative rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer select-none
         ${dragging
-          ? 'border-indigo-400 bg-indigo-50 scale-[1.01]'
+          ? 'border-indigo-500 bg-indigo-950/30 scale-[1.01]'
           : file
-            ? 'border-emerald-300 bg-emerald-50 cursor-default'
-            : 'border-gray-200 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50/50'
+            ? 'border-emerald-700 bg-emerald-950/20 cursor-default'
+            : 'border-slate-700 bg-slate-800/30 hover:border-indigo-600 hover:bg-indigo-950/20'
         }`}
       style={{ minHeight: '160px' }}
     >
@@ -44,14 +44,14 @@ export default function FileDropzone({ file, onFileChange, accept, label, suppor
       <div className="flex flex-col items-center justify-center p-6 sm:p-10 text-center">
         {file ? (
           <>
-            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
-              <FileCheck size={22} className="text-emerald-600" />
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-emerald-900/40 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
+              <FileCheck size={22} className="text-emerald-400" />
             </div>
-            <p className="font-semibold text-gray-800 truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
-            <p className="text-gray-400 text-sm mt-1">{formatBytes(file.size)}</p>
+            <p className="font-semibold text-slate-200 truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
+            <p className="text-slate-500 text-sm mt-1">{formatBytes(file.size)}</p>
             <button
               onClick={handleClear}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 font-medium transition-colors"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
             >
               <X size={12} /> Remove
             </button>
@@ -59,13 +59,13 @@ export default function FileDropzone({ file, onFileChange, accept, label, suppor
         ) : (
           <>
             <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 transition-colors shadow-sm
-              ${dragging ? 'bg-indigo-100' : 'bg-white border border-gray-200'}`}>
-              <Upload size={22} className={dragging ? 'text-indigo-500' : 'text-gray-400'} />
+              ${dragging ? 'bg-indigo-900/50' : 'bg-slate-800 border border-slate-700'}`}>
+              <Upload size={22} className={dragging ? 'text-indigo-400' : 'text-slate-500'} />
             </div>
-            <p className="font-semibold text-gray-700 text-base">{label || 'Drop your file here'}</p>
-            <p className="text-gray-400 text-sm mt-1">or <span className="text-indigo-600 font-semibold">browse files</span></p>
+            <p className="font-semibold text-slate-300 text-base">{label || 'Drop your file here'}</p>
+            <p className="text-slate-500 text-sm mt-1">or <span className="text-indigo-400 font-semibold">browse files</span></p>
             {(supportedLabel || accept) && (
-              <p className="text-xs text-gray-400 mt-3 bg-white px-3 py-1 rounded-full border border-gray-100">
+              <p className="text-xs text-slate-500 mt-3 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
                 {supportedLabel || accept.replace(/\./g, '').toUpperCase()}
               </p>
             )}

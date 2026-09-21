@@ -59,17 +59,17 @@ export default function ImageGrayscale() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-          <Contrast size={20} className="text-slate-600" />
+        <div className="w-10 h-10 bg-slate-800/40 rounded-xl flex items-center justify-center">
+          <Contrast size={20} className="text-slate-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Grayscale Converter</h1>
-          <p className="text-gray-500 text-sm">Convert color images to black & white</p>
+          <h1 className="text-2xl font-bold text-white">Grayscale Converter</h1>
+          <p className="text-slate-400 text-sm">Convert color images to black & white</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="flex items-center gap-2 bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           {error}
         </div>
       )}
@@ -77,23 +77,23 @@ export default function ImageGrayscale() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Conversion complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Conversion complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Original size</p>
-              <p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p>
+              <p className="text-xs text-slate-400 mb-1">Original size</p>
+              <p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Output size</p>
-              <p className="font-semibold text-green-700">{formatBytes(result.size)}</p>
+              <p className="text-xs text-slate-400 mb-1">Output size</p>
+              <p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p>
             </div>
           </div>
 
@@ -115,20 +115,20 @@ export default function ImageGrayscale() {
             label="Drag & drop a color image here"
           />
 
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="bg-slate-800 rounded-lg p-4 border border-slate-800">
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
                 <div className="w-5 h-5 rounded-full bg-red-400" />
                 <div className="w-5 h-5 rounded-full bg-green-400" />
                 <div className="w-5 h-5 rounded-full bg-blue-400" />
               </div>
-              <span className="text-gray-500 text-sm">→</span>
+              <span className="text-slate-400 text-sm">→</span>
               <div className="flex gap-1.5">
                 <div className="w-5 h-5 rounded-full bg-gray-200" />
                 <div className="w-5 h-5 rounded-full bg-gray-400" />
                 <div className="w-5 h-5 rounded-full bg-gray-700" />
               </div>
-              <span className="text-sm text-gray-600 font-medium ml-2">Color → Grayscale</span>
+              <span className="text-sm text-slate-400 font-medium ml-2">Color → Grayscale</span>
             </div>
           </div>
 
