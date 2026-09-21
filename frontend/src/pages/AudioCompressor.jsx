@@ -62,23 +62,23 @@ export default function AudioCompressor() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><Volume2 size={20} className="text-purple-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Audio Compressor</h1><p className="text-gray-500 text-sm">Reduce audio file size by bitrate or target size</p></div>
+        <div className="w-10 h-10 bg-purple-900/40 rounded-xl flex items-center justify-center"><Volume2 size={20} className="text-purple-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">Audio Compressor</h1><p className="text-slate-400 text-sm">Reduce audio file size by bitrate or target size</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">Compression complete!</p>
-              <p className="text-sm text-gray-500">{savings > 0 ? `Reduced by ${savings}%` : 'Processed'}{result.bitrateUsed ? ` · ${result.bitrateUsed}` : ''}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">Compression complete!</p>
+              <p className="text-sm text-slate-400">{savings > 0 ? `Reduced by ${savings}%` : 'Processed'}{result.bitrateUsed ? ` · ${result.bitrateUsed}` : ''}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-3 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Compressed</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Saved</p><p className="font-bold text-indigo-700">{savings}%</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-3 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Compressed</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Saved</p><p className="font-bold text-indigo-300">{savings}%</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -91,11 +91,11 @@ export default function AudioCompressor() {
             supportedLabel="35+ audio formats (MP3, WAV, FLAC, AAC, OGG, OPUS, AIFF, APE, MPC, RA, WV, AMR …)" label="Drag & drop an audio file here" />
 
           <div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">Compression mode:</p>
+            <p className="text-sm font-semibold text-slate-300 mb-3">Compression mode:</p>
             <div className="grid grid-cols-2 gap-2">
               {[['bitrate', Sliders, 'By Bitrate', 'Choose audio quality'], ['targetSize', Target, 'By Target Size', 'Set exact output size']].map(([m, Icon, label, desc]) => (
-                <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 text-left transition-all ${mode === m ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-indigo-300'}`}>
-                  <Icon size={16} /><div><p className="font-semibold text-sm">{label}</p><p className="text-xs text-gray-400">{desc}</p></div>
+                <button key={m} onClick={() => setMode(m)} className={`flex items-center gap-2 px-4 py-3 rounded-lg border-2 text-left transition-all ${mode === m ? 'border-indigo-500 bg-indigo-950/60 text-indigo-300' : 'border-slate-700 text-slate-400 hover:border-indigo-500'}`}>
+                  <Icon size={16} /><div><p className="font-semibold text-sm">{label}</p><p className="text-xs text-slate-500">{desc}</p></div>
                 </button>
               ))}
             </div>
@@ -104,9 +104,9 @@ export default function AudioCompressor() {
           {mode === 'bitrate' && (
             <div className="grid grid-cols-2 gap-2">
               {BITRATES.map(b => (
-                <button key={b.value} onClick={() => setBitrate(b.value)} className={`px-4 py-3 rounded-lg border-2 text-left transition-all ${bitrate === b.value ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'}`}>
-                  <p className={`font-semibold text-sm ${bitrate === b.value ? 'text-indigo-700' : 'text-gray-700'}`}>{b.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{b.desc}</p>
+                <button key={b.value} onClick={() => setBitrate(b.value)} className={`px-4 py-3 rounded-lg border-2 text-left transition-all ${bitrate === b.value ? 'border-indigo-500 bg-indigo-950/60' : 'border-slate-700 hover:border-indigo-500'}`}>
+                  <p className={`font-semibold text-sm ${bitrate === b.value ? 'text-indigo-300' : 'text-slate-200'}`}>{b.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{b.desc}</p>
                 </button>
               ))}
             </div>
@@ -114,18 +114,18 @@ export default function AudioCompressor() {
 
           {mode === 'targetSize' && (
             <div>
-              <p className="text-sm font-semibold text-gray-700 mb-3">Target output size:</p>
+              <p className="text-sm font-semibold text-slate-300 mb-3">Target output size:</p>
               <div className="flex gap-2">
                 <input type="number" min="1" step="any" value={targetSize} onChange={(e) => setTargetSize(e.target.value)} placeholder="e.g. 500"
-                  className="flex-1 border-2 border-gray-200 rounded-lg px-4 py-3 text-sm font-medium focus:outline-none focus:border-indigo-500 transition-colors" />
-                <select value={targetUnit} onChange={(e) => setTargetUnit(e.target.value)} className="border-2 border-gray-200 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 focus:outline-none focus:border-indigo-500 bg-white cursor-pointer">
+                  className="flex-1 border-2 border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-4 py-3 text-sm font-medium focus:outline-none focus:border-indigo-500 transition-colors" />
+                <select value={targetUnit} onChange={(e) => setTargetUnit(e.target.value)} className="border-2 border-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-slate-200 focus:outline-none focus:border-indigo-500 bg-slate-800 cursor-pointer">
                   <option value="KB">KB</option><option value="MB">MB</option>
                 </select>
               </div>
               {file && targetSize && parseFloat(targetSize) > 0 && (
-                <p className="text-xs text-gray-400 mt-2">Original: {formatBytes(file.size)} → Target: {formatBytes(targetSizeKB * 1024)}{targetSizeKB * 1024 >= file.size && <span className="text-amber-500 ml-1">— must be smaller than original</span>}</p>
+                <p className="text-xs text-slate-500 mt-2">Original: {formatBytes(file.size)} → Target: {formatBytes(targetSizeKB * 1024)}{targetSizeKB * 1024 >= file.size && <span className="text-amber-400 ml-1">— must be smaller than original</span>}</p>
               )}
-              <p className="text-xs text-gray-400 mt-2">Bitrate is auto-calculated from your audio duration. Min 32 kbps.</p>
+              <p className="text-xs text-slate-500 mt-2">Bitrate is auto-calculated from your audio duration. Min 32 kbps.</p>
             </div>
           )}
 

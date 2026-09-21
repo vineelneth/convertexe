@@ -48,21 +48,21 @@ export default function WatermarkPdf() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><PenLine size={20} className="text-red-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Watermark PDF</h1><p className="text-gray-500 text-sm">Add a diagonal text watermark to every page</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><PenLine size={20} className="text-rose-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">Watermark PDF</h1><p className="text-slate-400 text-sm">Add a diagonal text watermark to every page</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">Watermark applied!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">Watermark applied!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">New size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">New size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -80,19 +80,19 @@ export default function WatermarkPdf() {
           />
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Watermark text</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Watermark text</label>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="CONFIDENTIAL"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Opacity: <span className="font-normal text-gray-500">{opacity}</span>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+              Opacity: <span className="font-normal text-slate-400">{opacity}</span>
             </label>
             <input
               type="range"
@@ -103,7 +103,7 @@ export default function WatermarkPdf() {
               onChange={(e) => setOpacity(parseFloat(e.target.value))}
               className="w-full accent-indigo-600"
             />
-            <div className="flex justify-between text-xs text-gray-400 mt-1"><span>Subtle (0.1)</span><span>Visible (0.5)</span></div>
+            <div className="flex justify-between text-xs text-slate-500 mt-1"><span>Subtle (0.1)</span><span>Visible (0.5)</span></div>
           </div>
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />

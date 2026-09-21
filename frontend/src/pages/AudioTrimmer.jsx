@@ -77,7 +77,7 @@ function WaveformSlider({ duration, waveform, startSec, endSec, onChange }) {
       onPointerUp={onPointerUp}
     >
       {/* ── Waveform visual (clips bars to rounded box) ── */}
-      <div className="h-24 rounded-2xl bg-gray-100 overflow-hidden relative cursor-col-resize">
+      <div className="h-24 rounded-2xl bg-slate-800 overflow-hidden relative cursor-col-resize">
 
         {/* Bars */}
         <div className="absolute inset-0 flex items-center gap-px px-1">
@@ -88,9 +88,9 @@ function WaveformSlider({ duration, waveform, startSec, endSec, onChange }) {
               <div
                 key={i}
                 className={`flex-1 rounded-full ${
-                  !waveform    ? 'bg-gray-200 animate-pulse'
+                  !waveform    ? 'bg-slate-700 animate-pulse'
                   : inRange    ? 'bg-indigo-400'
-                               : 'bg-gray-300'
+                               : 'bg-slate-600'
                 }`}
                 style={{ height: `${Math.max(4, amp * 88)}%` }}
               />
@@ -131,7 +131,7 @@ function WaveformSlider({ duration, waveform, startSec, endSec, onChange }) {
       />
 
       {/* ── Duration ruler ── */}
-      <div className="flex justify-between text-[10px] text-gray-400 mt-1 px-0.5">
+      <div className="flex justify-between text-[10px] text-slate-500 mt-1 px-0.5">
         <span>0:00</span>
         <span>{formatTime(duration)}</span>
       </div>
@@ -283,17 +283,17 @@ export default function AudioTrimmer() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-          <Scissors size={20} className="text-violet-600" />
+        <div className="w-10 h-10 bg-violet-900/40 rounded-xl flex items-center justify-center">
+          <Scissors size={20} className="text-violet-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Audio Trimmer</h1>
-          <p className="text-gray-500 text-sm">Cut audio to a specific start and end time</p>
+          <h1 className="text-2xl font-bold text-white">Audio Trimmer</h1>
+          <p className="text-slate-400 text-sm">Cut audio to a specific start and end time</p>
         </div>
       </div>
 
       {(error || jobError) && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-xl px-4 py-3 mb-4 text-sm">
           {error || jobError}
         </div>
       )}
@@ -301,17 +301,17 @@ export default function AudioTrimmer() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Trim complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Trim complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Trimmed size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Trimmed size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
@@ -335,13 +335,13 @@ export default function AudioTrimmer() {
           {file && duration != null && (
             <>
               {/* Stats row */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 px-0.5 gap-0.5 sm:gap-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-slate-400 px-0.5 gap-0.5 sm:gap-0">
                 <span>
-                  Total duration: <span className="font-semibold text-gray-700">{formatTime(duration)}</span>
+                  Total duration: <span className="font-semibold text-slate-200">{formatTime(duration)}</span>
                 </span>
                 <span>
-                  Selected: <span className="font-semibold text-indigo-600">{formatTime(endSec - startSec)}</span>
-                  <span className="text-gray-400"> ({formatTime(startSec)} → {formatTime(endSec)})</span>
+                  Selected: <span className="font-semibold text-indigo-400">{formatTime(endSec - startSec)}</span>
+                  <span className="text-slate-500"> ({formatTime(startSec)} → {formatTime(endSec)})</span>
                 </span>
               </div>
 
@@ -357,23 +357,23 @@ export default function AudioTrimmer() {
               {/* Manual time inputs */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Start time</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">Start time</label>
                   <input
                     type="text"
                     value={startStr}
                     onChange={(e) => handleStartStrChange(e.target.value)}
                     placeholder="0:00"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">End time</label>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">End time</label>
                   <input
                     type="text"
                     value={endStr}
                     onChange={(e) => handleEndStrChange(e.target.value)}
                     placeholder={formatTime(duration)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   />
                 </div>
               </div>

@@ -18,20 +18,20 @@ function SortableItem({ item, index, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2.5 shadow-sm">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 shadow-sm">
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0"
+        className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300 flex-shrink-0"
       >
         <GripVertical size={18} />
       </div>
-      <span className="w-6 h-6 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">{index + 1}</span>
+      <span className="w-6 h-6 bg-indigo-900/40 text-indigo-300 text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">{index + 1}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 truncate font-medium">{item.file.name}</p>
-        <p className="text-xs text-gray-400">{formatBytes(item.file.size)}</p>
+        <p className="text-sm text-slate-200 truncate font-medium">{item.file.name}</p>
+        <p className="text-xs text-slate-500">{formatBytes(item.file.size)}</p>
       </div>
-      <button onClick={() => onRemove(item.id)} className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+      <button onClick={() => onRemove(item.id)} className="text-slate-500 hover:text-red-400 transition-colors flex-shrink-0">
         <X size={16} />
       </button>
     </div>
@@ -99,21 +99,21 @@ export default function MergePdf() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><FilePlus2 size={20} className="text-red-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Merge PDFs</h1><p className="text-gray-500 text-sm">Combine multiple PDFs into one document</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><FilePlus2 size={20} className="text-rose-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">Merge PDFs</h1><p className="text-slate-400 text-sm">Combine multiple PDFs into one document</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">PDFs merged!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">PDFs merged!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Combined size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Merged PDF</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Combined size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Merged PDF</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -127,17 +127,17 @@ export default function MergePdf() {
             onDragLeave={() => setDraggingOver(false)}
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center py-8 gap-2
-              ${draggingOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'}`}
+              ${draggingOver ? 'border-indigo-500 bg-indigo-950/40' : 'border-slate-700 bg-slate-800/50 hover:border-indigo-500 hover:bg-indigo-950/40'}`}
           >
-            <Upload size={28} className={draggingOver ? 'text-indigo-600' : 'text-gray-400'} />
-            <p className="font-semibold text-gray-700">Drag & drop PDF files here</p>
-            <p className="text-gray-400 text-sm">or <span className="text-indigo-600 font-medium">click to browse</span></p>
+            <Upload size={28} className={draggingOver ? 'text-indigo-400' : 'text-slate-500'} />
+            <p className="font-semibold text-slate-300">Drag & drop PDF files here</p>
+            <p className="text-slate-400 text-sm">or <span className="text-indigo-400 font-medium">click to browse</span></p>
             <input type="file" multiple accept=".pdf" className="hidden" onChange={(e) => e.target.files.length && addFiles(e.target.files)} />
           </label>
 
           {files.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-gray-700">{files.length} PDF{files.length !== 1 ? 's' : ''} — drag to reorder</p>
+              <p className="text-sm font-semibold text-slate-300">{files.length} PDF{files.length !== 1 ? 's' : ''} — drag to reorder</p>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={files.map(f => f.id)} strategy={verticalListSortingStrategy}>
                   <div className="space-y-2">
@@ -157,7 +157,7 @@ export default function MergePdf() {
               : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing...</>
               : <><FilePlus2 size={16} /> Merge PDFs</>}
           </button>
-          {files.length === 1 && <p className="text-xs text-center text-gray-400">Add at least one more PDF to merge</p>}
+          {files.length === 1 && <p className="text-xs text-center text-slate-500">Add at least one more PDF to merge</p>}
         </div>
       )}
     </div>

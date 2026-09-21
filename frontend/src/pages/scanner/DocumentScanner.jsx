@@ -940,17 +940,17 @@ export default function DocumentScanner() {
       {showCamera && <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />}
 
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-          <ScanLine size={20} className="text-violet-600" />
+        <div className="w-10 h-10 bg-violet-900/40 rounded-xl flex items-center justify-center">
+          <ScanLine size={20} className="text-violet-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Document Scanner</h1>
-          <p className="text-gray-500 text-sm">Auto-detect edges, correct perspective, export as PDF or images</p>
+          <h1 className="text-2xl font-bold text-white">Document Scanner</h1>
+          <p className="text-slate-400 text-sm">Auto-detect edges, correct perspective, export as PDF or images</p>
         </div>
       </div>
 
       {(error || jobError) && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           {error || jobError}
         </div>
       )}
@@ -960,37 +960,37 @@ export default function DocumentScanner() {
         <div className="card space-y-5">
           {pages.length > 0 ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600 font-medium">
+              <p className="text-sm text-slate-400 font-medium">
                 Session active — {pages.length} page{pages.length !== 1 ? 's' : ''} scanned
               </p>
               <button
                 onClick={() => setStep('review')}
-                className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 transition-colors"
+                className="text-xs text-indigo-400 border border-indigo-700 rounded-lg px-2.5 py-1.5 hover:bg-indigo-950/40 transition-colors"
               >
                 Back to pages
               </button>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-400">
               Upload a photo of a document or use your camera. Corners are detected automatically — drag them to adjust.
             </p>
           )}
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => inputRef.current?.click()}
-              className="flex flex-col items-center gap-3 p-7 border-2 border-dashed border-gray-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+              className="flex flex-col items-center gap-3 p-7 border-2 border-dashed border-slate-600 rounded-xl hover:border-indigo-500 hover:bg-indigo-950/30 transition-colors"
             >
-              <Upload size={28} className="text-gray-400" />
-              <span className="font-semibold text-gray-700">Upload Photo</span>
-              <span className="text-xs text-gray-400">JPG, PNG, WebP</span>
+              <Upload size={28} className="text-slate-500" />
+              <span className="font-semibold text-slate-300">Upload Photo</span>
+              <span className="text-xs text-slate-500">JPG, PNG, WebP</span>
             </button>
             <button
               onClick={() => setShowCamera(true)}
-              className="flex flex-col items-center gap-3 p-7 border-2 border-dashed border-gray-300 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+              className="flex flex-col items-center gap-3 p-7 border-2 border-dashed border-slate-600 rounded-xl hover:border-indigo-500 hover:bg-indigo-950/30 transition-colors"
             >
-              <Camera size={28} className="text-gray-400" />
-              <span className="font-semibold text-gray-700">Use Camera</span>
-              <span className="text-xs text-gray-400">Webcam or phone</span>
+              <Camera size={28} className="text-slate-500" />
+              <span className="font-semibold text-slate-300">Use Camera</span>
+              <span className="text-xs text-slate-500">Webcam or phone</span>
             </button>
           </div>
           <input
@@ -1007,7 +1007,7 @@ export default function DocumentScanner() {
       {step === 'adjust' && corners && (
         <div className="card space-y-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-700">
+            <p className="text-sm font-semibold text-slate-300">
               {pages.length > 0
                 ? `Page ${pages.length + 1} — drag corners to align`
                 : 'Drag corners to align with document edges'}
@@ -1015,30 +1015,30 @@ export default function DocumentScanner() {
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setCorners(detectCorners(imageCanvas))}
-                className="flex items-center gap-1 text-xs text-indigo-600 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-50 transition-colors"
+                className="flex items-center gap-1 text-xs text-indigo-400 border border-indigo-700 rounded-lg px-2.5 py-1.5 hover:bg-indigo-950/40 transition-colors"
               >
                 <Crosshair size={12} /> Re-detect
               </button>
               <button
                 onClick={pages.length > 0 ? handleAddPage : handleReset}
-                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                className="text-xs text-slate-500 hover:text-slate-300 flex items-center gap-1"
               >
                 <X size={12} /> {pages.length > 0 ? 'Cancel' : 'Start over'}
               </button>
             </div>
           </div>
 
-          <div className="flex justify-center bg-gray-100 rounded-xl overflow-hidden">
+          <div className="flex justify-center bg-slate-800 rounded-xl overflow-hidden">
             <CornerEditor imageCanvas={imageCanvas} corners={corners} onChange={setCorners} />
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Enhancement</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Enhancement</p>
             <div className="flex gap-4">
               {[['bw', 'Black & White'], ['grayscale', 'Grayscale'], ['color', 'Color']].map(([v, l]) => (
                 <label key={v} className="flex items-center gap-2 cursor-pointer group">
                   <input type="radio" name="mode" value={v} checked={mode === v} onChange={() => setMode(v)} className="accent-indigo-600" />
-                  <span className="text-sm text-gray-700 group-hover:text-gray-900">{l}</span>
+                  <span className="text-sm text-slate-300 group-hover:text-white">{l}</span>
                 </label>
               ))}
             </div>
@@ -1064,12 +1064,12 @@ export default function DocumentScanner() {
       {step === 'review' && pages.length > 0 && (
         <div className="card space-y-5">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-gray-800">
+            <h2 className="font-semibold text-slate-200">
               {pages.length} page{pages.length !== 1 ? 's' : ''} scanned
             </h2>
             <button
               onClick={handleAddPage}
-              className="flex items-center gap-1.5 text-sm text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm text-indigo-400 border border-indigo-700 rounded-lg px-3 py-1.5 hover:bg-indigo-950/40 transition-colors shrink-0"
             >
               <Plus size={14} /> Add Page
             </button>
@@ -1079,21 +1079,21 @@ export default function DocumentScanner() {
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {pages.map((page, idx) => (
               <div key={page.id} className="relative group">
-                <div className="aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                <div className="aspect-[3/4] bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
                   <img
                     src={page.previewUrl}
                     alt={`Page ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-center text-xs text-gray-400 mt-1">{idx + 1}</p>
+                <p className="text-center text-xs text-slate-500 mt-1">{idx + 1}</p>
                 {/* hover/focus overlay: reorder + delete */}
                 <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {idx > 0 && (
                     <button
                       onClick={() => handleMovePage(page.id, -1)}
                       title="Move up"
-                      className="w-6 h-6 bg-white rounded shadow text-gray-600 hover:text-indigo-600 flex items-center justify-center text-xs font-bold leading-none"
+                      className="w-6 h-6 bg-slate-700 rounded shadow text-slate-400 hover:text-indigo-400 flex items-center justify-center text-xs font-bold leading-none"
                     >
                       ↑
                     </button>
@@ -1102,7 +1102,7 @@ export default function DocumentScanner() {
                     <button
                       onClick={() => handleMovePage(page.id, 1)}
                       title="Move down"
-                      className="w-6 h-6 bg-white rounded shadow text-gray-600 hover:text-indigo-600 flex items-center justify-center text-xs font-bold leading-none"
+                      className="w-6 h-6 bg-slate-700 rounded shadow text-slate-400 hover:text-indigo-400 flex items-center justify-center text-xs font-bold leading-none"
                     >
                       ↓
                     </button>
@@ -1120,8 +1120,8 @@ export default function DocumentScanner() {
           </div>
 
           {/* Export */}
-          <div className="border-t border-gray-100 pt-4 space-y-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Export</p>
+          <div className="border-t border-slate-800 pt-4 space-y-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Export</p>
             <JobStatus status={status} progress={progress} position={position} error={jobError} />
             <div className="flex gap-3">
               <button
@@ -1145,7 +1145,7 @@ export default function DocumentScanner() {
             </div>
             <button
               onClick={handleReset}
-              className="w-full text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1 py-1"
+              className="w-full text-xs text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 py-1"
             >
               <RefreshCw size={11} /> Start new scan
             </button>
@@ -1157,17 +1157,17 @@ export default function DocumentScanner() {
       {step === 'done' && result && status === 'completed' && (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">Export complete!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">Export complete!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Input size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Output size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Input size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Output size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
