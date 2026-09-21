@@ -1,14 +1,96 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useLocation } from 'react-router-dom';
-import { Zap, ChevronLeft } from 'lucide-react';
+import { Zap, ChevronLeft, X, Send, CheckCircle } from 'lucide-react';
 
 let viewsPosted = false;
+
+function ContactModal({ onClose }) {
+  const [fields, setFields] = useState({ email: '', message: '' });
+  const [state, setState] = useState('idle'); // idle | sending | done | error
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setState('sending');
+    try {
+      await axios.post('https://formspree.io/f/mnpnpzdb', fields, {
+        headers: { Accept: 'application/json' },
+      });
+      setState('done');
+    } catch {
+      setState('error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-white">Report a bug or issue</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {state === 'done' ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <div className="w-12 h-12 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={24} className="text-emerald-400" />
+            </div>
+            <p className="font-semibold text-white">Message sent!</p>
+            <p className="text-sm text-slate-400">Thanks for the report — we'll look into it.</p>
+            <button onClick={onClose} className="mt-2 btn-primary px-6">Close</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Your email <span className="text-slate-600 font-normal">(optional)</span></label>
+              <input
+                type="email"
+                value={fields.email}
+                onChange={e => setFields(f => ({ ...f, email: e.target.value }))}
+                placeholder="so we can follow up"
+                className="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 block">What happened?</label>
+              <textarea
+                required
+                rows={4}
+                value={fields.message}
+                onChange={e => setFields(f => ({ ...f, message: e.target.value }))}
+                placeholder="Describe the bug or issue..."
+                className="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              />
+            </div>
+            {state === 'error' && (
+              <p className="text-xs text-red-400">Something went wrong — please try again.</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+              <button
+                type="submit"
+                disabled={state === 'sending'}
+                className="btn-primary flex-1 flex items-center justify-center gap-2"
+              >
+                <Send size={14} />
+                {state === 'sending' ? 'Sending…' : 'Send Report'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Layout({ children }) {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const [views, setViews] = useState(null);
+  const [showContact, setShowContact] = useState(false);
 
   useEffect(() => {
     if (!isHome || viewsPosted) return;
@@ -51,17 +133,17 @@ export default function Layout({ children }) {
           {views !== null && <span className="text-slate-700">|</span>}
           <span>
             Found a bug or issue?{' '}
-            <a
-              href="https://mail.google.com/mail/?view=cm&to=samavineel04@gmail.com&su=Convertexe%20Bug%20Report"
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-400 hover:text-indigo-300 transition-colors"
+            <button
+              onClick={() => setShowContact(true)}
+              className="text-indigo-400 hover:text-indigo-300 transition-colors underline underline-offset-2"
             >
-              support email
-            </a>
+              Report it
+            </button>
           </span>
         </p>
       </footer>
+
+      {showContact && <ContactModal onClose={() => setShowContact(false)} />}
     </div>
   );
 }
