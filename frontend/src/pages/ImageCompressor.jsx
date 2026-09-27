@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Minimize2, Download, RefreshCw, CheckCircle, Sliders, Target } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -23,14 +23,7 @@ export default function ImageCompressor() {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
-
-  const [previewUrl, setPreviewUrl] = useState(null);
-  useEffect(() => {
-    if (!file) { setPreviewUrl(null); return; }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  const originalUrlRef = useRef(null);
 
   const targetSizeKB = targetSize ? (targetUnit === 'MB' ? parseFloat(targetSize) * 1024 : parseFloat(targetSize)) : null;
   const isValid = file && (mode === 'quality' || (targetSize && parseFloat(targetSize) > 0));
@@ -40,6 +33,8 @@ export default function ImageCompressor() {
 
   const handleCompress = async () => {
     if (!isValid) return;
+    if (originalUrlRef.current) URL.revokeObjectURL(originalUrlRef.current);
+    originalUrlRef.current = URL.createObjectURL(file);
     setLoading(true); setError('');
     const formData = new FormData();
     formData.append('file', file);
@@ -60,7 +55,10 @@ export default function ImageCompressor() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  const handleReset = () => { setFile(null); setQuality(80); setTargetSize(''); setError(''); resetJob(); };
+  const handleReset = () => {
+    if (originalUrlRef.current) { URL.revokeObjectURL(originalUrlRef.current); originalUrlRef.current = null; }
+    setFile(null); setQuality(80); setTargetSize(''); setError(''); resetJob();
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -73,24 +71,20 @@ export default function ImageCompressor() {
 
       {result && status === 'completed' ? (
         <div className="card">
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
             <div><p className="font-semibold text-slate-200">Compression complete!</p>
               <p className="text-sm text-slate-400">{savings > 0 ? `Reduced by ${savings}%` : 'File processed'}{result.qualityUsed != null ? ` · Quality: ${result.qualityUsed}%` : ''}</p></div>
           </div>
-          {previewUrl && (
-            <div className="grid grid-cols-2 gap-2 mb-4">
+          {originalUrlRef.current && (
+            <div className="grid grid-cols-2 gap-3 mb-5">
               <div>
-                <p className="text-xs text-slate-500 mb-1">Before</p>
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
-                  <img src={previewUrl} alt="Original" className="max-w-full max-h-full object-contain" />
-                </div>
+                <p className="text-xs text-slate-400 mb-1.5">Before</p>
+                <img src={originalUrlRef.current} alt="Original" className="w-full h-40 object-contain bg-slate-800 rounded-xl" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1">After</p>
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
-                  <img src={result.downloadUrl.replace('/api/download/', '/api/preview/')} alt="Compressed" className="max-w-full max-h-full object-contain" />
-                </div>
+                <p className="text-xs text-slate-400 mb-1.5">After</p>
+                <img src={result.downloadUrl.replace('/api/download/', '/api/preview/')} alt="Compressed" className="w-full h-40 object-contain bg-slate-800 rounded-xl" />
               </div>
             </div>
           )}
@@ -107,12 +101,6 @@ export default function ImageCompressor() {
       ) : (
         <div className="card space-y-6">
           <FileDropzone file={file} onFileChange={setFile} accept=".jpg,.jpeg,.png,.webp,.avif" label="Drag & drop an image here" />
-
-          {previewUrl && (
-            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
-              <img src={previewUrl} alt="Original" className="max-w-full max-h-full object-contain" />
-            </div>
-          )}
 
           <div>
             <p className="text-sm font-semibold text-slate-300 mb-3">Compression mode:</p>

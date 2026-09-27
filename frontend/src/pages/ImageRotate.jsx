@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { RotateCw, Download, RefreshCw, CheckCircle, FlipHorizontal2 } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -19,8 +19,23 @@ export default function ImageRotate() {
   const [flip, setFlip] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
+
+  useEffect(() => {
+    const url = file ? URL.createObjectURL(file) : null;
+    setPreviewUrl(url);
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [file]);
+
+  const getTransform = () => {
+    let t = '';
+    if (angle) t += `rotate(${angle}deg) `;
+    if (flip === 'horizontal') t += 'scaleX(-1)';
+    else if (flip === 'vertical') t += 'scaleY(-1)';
+    return t.trim() || 'none';
+  };
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Operation failed') : '';
 
@@ -59,17 +74,11 @@ export default function ImageRotate() {
     setAngle(0);
     setFlip('');
     setError('');
+    setPreviewUrl(null);
     resetJob();
   };
 
   const canProcess = file && (angle !== 0 || flip !== '');
-  const [previewUrl, setPreviewUrl] = useState(null);
-  useEffect(() => {
-    if (!file) { setPreviewUrl(null); return; }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -172,19 +181,12 @@ export default function ImageRotate() {
           </div>
 
           {previewUrl && (
-            <div>
-              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
-              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center max-h-36 sm:max-h-48">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-w-full max-h-36 sm:max-h-48 object-contain"
-                  style={{
-                    transform: `rotate(${angle}deg) ${flip === 'horizontal' ? 'scaleX(-1)' : flip === 'vertical' ? 'scaleY(-1)' : ''}`,
-                    transition: 'transform 0.2s ease',
-                  }}
-                />
-              </div>
+            <div className="h-40 overflow-hidden flex items-center justify-center bg-slate-800 rounded-xl">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                style={{ transform: getTransform(), maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', transition: 'transform 0.15s ease' }}
+              />
             </div>
           )}
 

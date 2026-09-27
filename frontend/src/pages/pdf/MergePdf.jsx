@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { FilePlus2, Download, RefreshCw, CheckCircle, X, GripVertical, Upload } from 'lucide-react';
+import { FilePlus2, Download, RefreshCw, CheckCircle, X, GripVertical, Upload, FileText } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
+import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -17,6 +18,7 @@ function formatBytes(bytes) {
 function SortableItem({ item, index, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const { thumbnails } = usePdfThumbnails(item.file, { maxPages: 1, width: 80 });
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 shadow-sm">
       <div
@@ -26,10 +28,14 @@ function SortableItem({ item, index, onRemove }) {
       >
         <GripVertical size={18} />
       </div>
-      {/* PDF thumbnail placeholder */}
-      <div className="w-8 h-11 sm:w-10 sm:h-14 bg-slate-700 border border-slate-600 rounded flex-shrink-0 flex items-center justify-center">
-        <span className="text-xs font-bold text-indigo-300 leading-none">{index + 1}</span>
-      </div>
+      {thumbnails[0] ? (
+        <img src={thumbnails[0].dataUrl} alt="p1" className="w-10 h-14 object-contain bg-slate-700 rounded flex-shrink-0" />
+      ) : (
+        <div className="w-10 h-14 bg-slate-700 rounded flex items-center justify-center flex-shrink-0">
+          <FileText size={16} className="text-slate-500" />
+        </div>
+      )}
+      <span className="w-6 h-6 bg-indigo-900/40 text-indigo-300 text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">{index + 1}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-slate-200 truncate font-medium">{item.file.name}</p>
         <p className="text-xs text-slate-500">{formatBytes(item.file.size)}</p>

@@ -80,38 +80,6 @@ export default function WatermarkPdf() {
           />
 
           <div>
-            <p className="text-xs text-slate-500 mb-1.5">Watermark preview</p>
-            <div className="flex justify-center">
-              <div
-                className="relative bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col justify-start p-4 gap-2"
-                style={{ aspectRatio: '1/1.414', maxHeight: '180px', width: 'auto' }}
-              >
-                {/* Simulated text lines */}
-                <div className="w-full h-2 bg-slate-700 rounded" />
-                <div className="w-4/5 h-2 bg-slate-700 rounded" />
-                <div className="w-full h-2 bg-slate-700 rounded" />
-                <div className="w-3/4 h-2 bg-slate-700 rounded" />
-                <div className="w-full h-2 bg-slate-700 rounded" />
-                <div className="w-5/6 h-2 bg-slate-700 rounded" />
-                <div className="w-full h-2 bg-slate-700 rounded" />
-                <div className="w-2/3 h-2 bg-slate-700 rounded" />
-                {/* Watermark overlay */}
-                <div
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  style={{ transform: 'rotate(-35deg)' }}
-                >
-                  <span
-                    className="text-sm font-bold tracking-widest uppercase whitespace-nowrap"
-                    style={{ color: '#94a3b8', opacity: opacity * 2 }}
-                  >
-                    {text || 'WATERMARK'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
             <label className="block text-sm font-semibold text-slate-300 mb-1.5">Watermark text</label>
             <input
               type="text"
@@ -137,6 +105,24 @@ export default function WatermarkPdf() {
             />
             <div className="flex justify-between text-xs text-slate-500 mt-1"><span>Subtle (0.1)</span><span>Visible (0.5)</span></div>
           </div>
+
+          {text.trim() && (
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold text-slate-300">Preview</p>
+              <div className="relative bg-white rounded-lg overflow-hidden mx-auto" style={{ aspectRatio: '1/1.414', maxHeight: '220px' }}>
+                <div className="absolute inset-0 p-4 flex flex-col gap-2 justify-center">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-2 bg-gray-200 rounded" style={{ width: `${60 + (i % 3) * 15}%` }} />
+                  ))}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span style={{ transform: 'rotate(-45deg)', opacity, fontSize: 'clamp(14px, 4vw, 28px)', fontWeight: 700, color: '#374151', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    {text}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />
 

@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Trash2, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
+import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -12,72 +13,28 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-function parsePageSet(str, total) {
-  const selected = new Set();
-  if (!str.trim()) return selected;
-  const parts = str.split(',');
-  for (const part of parts) {
-    const trimmed = part.trim();
-    const range = trimmed.match(/^(\d+)-(\d+)$/);
-    if (range) {
-      const from = parseInt(range[1]), to = parseInt(range[2]);
-      for (let i = Math.min(from, to); i <= Math.max(from, to); i++) {
-        if (!total || (i >= 1 && i <= total)) selected.add(i);
-      }
-    } else {
-      const n = parseInt(trimmed);
-      if (!isNaN(n) && (!total || (n >= 1 && n <= total))) selected.add(n);
-    }
-  }
-  return selected;
-}
-
-function serializePageSet(set) {
-  if (!set.size) return '';
-  return Array.from(set).sort((a, b) => a - b).join(', ');
-}
-
 export default function DeletePages() {
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState('');
-  const [pageCount, setPageCount] = useState(0);
   const [selectedPages, setSelectedPages] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
+  const { thumbnails, pageCount, loading: thumbLoading } = usePdfThumbnails(file);
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Delete pages failed') : '';
 
-  const handleFileChange = useCallback(async (newFile) => {
-    setFile(newFile);
-    setSelectedPages(new Set());
-    setPages('');
-    setPageCount(0);
-    if (!newFile) return;
-    // Try to get page count from the backend
-    try {
-      const formData = new FormData();
-      formData.append('file', newFile);
-      const { data } = await axios.post('/api/pdf/page-count', formData);
-      if (data.pageCount) setPageCount(data.pageCount);
-    } catch {
-      // page-count endpoint may not exist; fall back gracefully
-    }
-  }, []);
+  useEffect(() => { setSelectedPages(new Set()); }, [file]);
 
-  const togglePage = (n) => {
+  const togglePage = (pageNum) => {
     setSelectedPages(prev => {
       const next = new Set(prev);
-      if (next.has(n)) next.delete(n); else next.add(n);
-      setPages(serializePageSet(next));
+      next.has(pageNum) ? next.delete(pageNum) : next.add(pageNum);
+      const sorted = [...next].sort((a, b) => a - b);
+      setPages(sorted.join(', '));
       return next;
     });
-  };
-
-  const handlePagesTextChange = (val) => {
-    setPages(val);
-    setSelectedPages(parsePageSet(val, pageCount));
   };
 
   const handleDelete = async () => {
@@ -99,7 +56,7 @@ export default function DeletePages() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  const handleReset = () => { setFile(null); setPages(''); setPageCount(0); setSelectedPages(new Set()); setError(''); resetJob(); };
+  const handleReset = () => { setFile(null); setPages(''); setSelectedPages(new Set()); setError(''); resetJob(); };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -129,50 +86,29 @@ export default function DeletePages() {
         <div className="card space-y-5">
           <FileDropzone
             file={file}
-            onFileChange={handleFileChange}
+            onFileChange={setFile}
             accept=".pdf"
             label="Drag & drop a PDF here"
             supportedLabel="PDF files only"
           />
 
-          {file && (
+          {file && (thumbnails.length > 0 || thumbLoading) && (
             <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <p className="text-xs text-slate-500">Click pages to mark for deletion</p>
-                {pageCount === 0 && (
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <span className="text-xs text-slate-500">Total pages:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={pageCount || ''}
-                      onChange={(e) => setPageCount(parseInt(e.target.value) || 0)}
-                      placeholder="e.g. 10"
-                      className="w-16 border border-slate-700 bg-slate-800 text-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  </div>
-                )}
+              <p className="text-sm font-semibold text-slate-300 mb-2">
+                Pages {thumbLoading ? <span className="text-slate-500 font-normal">(loading...)</span> : <span className="text-slate-500 font-normal">({pageCount} total) — click to select pages to delete</span>}
+              </p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+                {thumbnails.map(({ pageNum, dataUrl }) => {
+                  const selected = selectedPages.has(pageNum);
+                  return (
+                    <div key={pageNum} className="relative cursor-pointer" onClick={() => togglePage(pageNum)}>
+                      <img src={dataUrl} alt={`Page ${pageNum}`} className={`w-full rounded border object-contain bg-slate-800 transition-all ${selected ? 'border-red-500 opacity-50' : 'border-slate-700 hover:border-slate-500'}`} />
+                      {selected && <div className="absolute inset-0 rounded bg-red-900/40 flex items-center justify-center"><Trash2 size={14} className="text-red-400" /></div>}
+                      <span className={`absolute bottom-0.5 right-0.5 text-[10px] px-1 rounded ${selected ? 'bg-red-900/80 text-red-300' : 'bg-slate-900/80 text-slate-300'}`}>{pageNum}</span>
+                    </div>
+                  );
+                })}
               </div>
-              {pageCount > 0 && (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                  {Array.from({ length: pageCount }, (_, i) => i + 1).map(n => {
-                    const isSelected = selectedPages.has(n);
-                    return (
-                      <button
-                        key={n}
-                        onClick={() => togglePage(n)}
-                        className={`relative bg-slate-800 border rounded-lg aspect-[3/4] flex items-center justify-center text-xs font-semibold transition-all overflow-hidden
-                          ${isSelected ? 'ring-2 ring-red-500 border-red-500 text-red-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}
-                      >
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-red-500/20" />
-                        )}
-                        <span className="relative z-10">{n}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
 
@@ -181,7 +117,7 @@ export default function DeletePages() {
             <input
               type="text"
               value={pages}
-              onChange={(e) => handlePagesTextChange(e.target.value)}
+              onChange={(e) => setPages(e.target.value)}
               placeholder="e.g. 2, 5, 8-10"
               className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />

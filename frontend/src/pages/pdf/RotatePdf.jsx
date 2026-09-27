@@ -4,6 +4,7 @@ import { RotateCw, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
 import { useJobPoller } from '../../hooks/useJobPoller';
+import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -23,6 +24,7 @@ export default function RotatePdf() {
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Rotation failed') : '';
+  const { thumbnails, pageCount, loading: thumbLoading } = usePdfThumbnails(file);
 
   const handleRotate = async () => {
     if (!file) return;
@@ -80,6 +82,22 @@ export default function RotatePdf() {
             label="Drag & drop a PDF here"
             supportedLabel="PDF files only"
           />
+
+          {file && (thumbnails.length > 0 || thumbLoading) && (
+            <div>
+              <p className="text-sm font-semibold text-slate-300 mb-2">
+                Pages {thumbLoading ? <span className="text-slate-500 font-normal">(loading...)</span> : <span className="text-slate-500 font-normal">({pageCount} total)</span>}
+              </p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+                {thumbnails.map(({ pageNum, dataUrl }) => (
+                  <div key={pageNum} className="relative">
+                    <img src={dataUrl} alt={`Page ${pageNum}`} className="w-full rounded border border-slate-700 object-contain bg-slate-800" />
+                    <span className="absolute bottom-0.5 right-0.5 text-[10px] bg-slate-900/80 text-slate-300 px-1 rounded">{pageNum}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="text-sm font-semibold text-slate-300 mb-2">Rotation angle</p>
