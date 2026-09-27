@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { Trash2, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
@@ -12,15 +12,73 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function parsePageSet(str, total) {
+  const selected = new Set();
+  if (!str.trim()) return selected;
+  const parts = str.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    const range = trimmed.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const from = parseInt(range[1]), to = parseInt(range[2]);
+      for (let i = Math.min(from, to); i <= Math.max(from, to); i++) {
+        if (!total || (i >= 1 && i <= total)) selected.add(i);
+      }
+    } else {
+      const n = parseInt(trimmed);
+      if (!isNaN(n) && (!total || (n >= 1 && n <= total))) selected.add(n);
+    }
+  }
+  return selected;
+}
+
+function serializePageSet(set) {
+  if (!set.size) return '';
+  return Array.from(set).sort((a, b) => a - b).join(', ');
+}
+
 export default function DeletePages() {
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState('');
+  const [pageCount, setPageCount] = useState(0);
+  const [selectedPages, setSelectedPages] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Delete pages failed') : '';
+
+  const handleFileChange = useCallback(async (newFile) => {
+    setFile(newFile);
+    setSelectedPages(new Set());
+    setPages('');
+    setPageCount(0);
+    if (!newFile) return;
+    // Try to get page count from the backend
+    try {
+      const formData = new FormData();
+      formData.append('file', newFile);
+      const { data } = await axios.post('/api/pdf/page-count', formData);
+      if (data.pageCount) setPageCount(data.pageCount);
+    } catch {
+      // page-count endpoint may not exist; fall back gracefully
+    }
+  }, []);
+
+  const togglePage = (n) => {
+    setSelectedPages(prev => {
+      const next = new Set(prev);
+      if (next.has(n)) next.delete(n); else next.add(n);
+      setPages(serializePageSet(next));
+      return next;
+    });
+  };
+
+  const handlePagesTextChange = (val) => {
+    setPages(val);
+    setSelectedPages(parsePageSet(val, pageCount));
+  };
 
   const handleDelete = async () => {
     if (!file || !pages.trim()) return;
@@ -41,7 +99,7 @@ export default function DeletePages() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  const handleReset = () => { setFile(null); setPages(''); setError(''); resetJob(); };
+  const handleReset = () => { setFile(null); setPages(''); setPageCount(0); setSelectedPages(new Set()); setError(''); resetJob(); };
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -71,18 +129,59 @@ export default function DeletePages() {
         <div className="card space-y-5">
           <FileDropzone
             file={file}
-            onFileChange={setFile}
+            onFileChange={handleFileChange}
             accept=".pdf"
             label="Drag & drop a PDF here"
             supportedLabel="PDF files only"
           />
+
+          {file && (
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className="text-xs text-slate-500">Click pages to mark for deletion</p>
+                {pageCount === 0 && (
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <span className="text-xs text-slate-500">Total pages:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={pageCount || ''}
+                      onChange={(e) => setPageCount(parseInt(e.target.value) || 0)}
+                      placeholder="e.g. 10"
+                      className="w-16 border border-slate-700 bg-slate-800 text-slate-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+              {pageCount > 0 && (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {Array.from({ length: pageCount }, (_, i) => i + 1).map(n => {
+                    const isSelected = selectedPages.has(n);
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => togglePage(n)}
+                        className={`relative bg-slate-800 border rounded-lg aspect-[3/4] flex items-center justify-center text-xs font-semibold transition-all overflow-hidden
+                          ${isSelected ? 'ring-2 ring-red-500 border-red-500 text-red-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}
+                      >
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-red-500/20" />
+                        )}
+                        <span className="relative z-10">{n}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-1.5">Pages to delete</label>
             <input
               type="text"
               value={pages}
-              onChange={(e) => setPages(e.target.value)}
+              onChange={(e) => handlePagesTextChange(e.target.value)}
               placeholder="e.g. 2, 5, 8-10"
               className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />

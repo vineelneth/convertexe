@@ -80,6 +80,38 @@ export default function WatermarkPdf() {
           />
 
           <div>
+            <p className="text-xs text-slate-500 mb-1.5">Watermark preview</p>
+            <div className="flex justify-center">
+              <div
+                className="relative bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col justify-start p-4 gap-2"
+                style={{ aspectRatio: '1/1.414', maxHeight: '180px', width: 'auto' }}
+              >
+                {/* Simulated text lines */}
+                <div className="w-full h-2 bg-slate-700 rounded" />
+                <div className="w-4/5 h-2 bg-slate-700 rounded" />
+                <div className="w-full h-2 bg-slate-700 rounded" />
+                <div className="w-3/4 h-2 bg-slate-700 rounded" />
+                <div className="w-full h-2 bg-slate-700 rounded" />
+                <div className="w-5/6 h-2 bg-slate-700 rounded" />
+                <div className="w-full h-2 bg-slate-700 rounded" />
+                <div className="w-2/3 h-2 bg-slate-700 rounded" />
+                {/* Watermark overlay */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{ transform: 'rotate(-35deg)' }}
+                >
+                  <span
+                    className="text-sm font-bold tracking-widest uppercase whitespace-nowrap"
+                    style={{ color: '#94a3b8', opacity: opacity * 2 }}
+                  >
+                    {text || 'WATERMARK'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-slate-300 mb-1.5">Watermark text</label>
             <input
               type="text"

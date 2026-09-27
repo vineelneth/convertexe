@@ -26,7 +26,10 @@ function SortableItem({ item, index, onRemove }) {
       >
         <GripVertical size={18} />
       </div>
-      <span className="w-6 h-6 bg-indigo-900/40 text-indigo-300 text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">{index + 1}</span>
+      {/* PDF thumbnail placeholder */}
+      <div className="w-8 h-11 sm:w-10 sm:h-14 bg-slate-700 border border-slate-600 rounded flex-shrink-0 flex items-center justify-center">
+        <span className="text-xs font-bold text-indigo-300 leading-none">{index + 1}</span>
+      </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-slate-200 truncate font-medium">{item.file.name}</p>
         <p className="text-xs text-slate-500">{formatBytes(item.file.size)}</p>

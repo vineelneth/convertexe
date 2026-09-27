@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { RotateCw, Download, RefreshCw, CheckCircle, FlipHorizontal2 } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -63,6 +63,7 @@ export default function ImageRotate() {
   };
 
   const canProcess = file && (angle !== 0 || flip !== '');
+  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -122,6 +123,23 @@ export default function ImageRotate() {
             accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff"
             label="Drag & drop an image here"
           />
+
+          {file && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center max-h-36 sm:max-h-48">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-w-full max-h-36 sm:max-h-48 object-contain"
+                  style={{
+                    transform: `rotate(${angle}deg) ${flip === 'horizontal' ? 'scaleX(-1)' : flip === 'vertical' ? 'scaleY(-1)' : ''}`,
+                    transition: 'transform 0.3s ease',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Rotation */}
           <div>

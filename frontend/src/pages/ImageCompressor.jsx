@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { Minimize2, Download, RefreshCw, CheckCircle, Sliders, Target } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -24,6 +24,7 @@ export default function ImageCompressor() {
   const [error, setError]         = useState('');
   const { startJob, reset: resetJob, status, progress, position, result } = useJobPoller();
 
+  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
   const targetSizeKB = targetSize ? (targetUnit === 'MB' ? parseFloat(targetSize) * 1024 : parseFloat(targetSize)) : null;
   const isValid = file && (mode === 'quality' || (targetSize && parseFloat(targetSize) > 0));
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
@@ -83,6 +84,33 @@ export default function ImageCompressor() {
       ) : (
         <div className="card space-y-6">
           <FileDropzone file={file} onFileChange={setFile} accept=".jpg,.jpeg,.png,.webp,.avif" label="Drag & drop an image here" />
+
+          {file && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
+                  <img
+                    src={previewUrl}
+                    alt="Original"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col items-center justify-center h-28 sm:h-40 gap-1">
+                  <img
+                    src={previewUrl}
+                    alt="Compressed preview"
+                    className="max-w-full max-h-full object-contain"
+                    style={{ filter: `contrast(${Math.max(0.8, quality / 100)}) brightness(${0.95 + (quality / 2000)})` }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-slate-500">Original</p>
+                <p className="text-xs text-slate-500">Compressed</p>
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="text-sm font-semibold text-slate-300 mb-3">Compression mode:</p>

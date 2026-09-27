@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { Contrast, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -55,6 +55,8 @@ export default function ImageGrayscale() {
     setError('');
     resetJob();
   };
+
+  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -115,22 +117,49 @@ export default function ImageGrayscale() {
             label="Drag & drop a color image here"
           />
 
-          <div className="bg-slate-800 rounded-lg p-4 border border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="flex gap-1.5">
-                <div className="w-5 h-5 rounded-full bg-red-400" />
-                <div className="w-5 h-5 rounded-full bg-green-400" />
-                <div className="w-5 h-5 rounded-full bg-blue-400" />
+          {file ? (
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-32">
+                  <img
+                    src={previewUrl}
+                    alt="Original"
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-32">
+                  <img
+                    src={previewUrl}
+                    alt="Grayscale preview"
+                    className="max-w-full max-h-full object-contain"
+                    style={{ filter: 'grayscale(100%)' }}
+                  />
+                </div>
               </div>
-              <span className="text-slate-400 text-sm">→</span>
-              <div className="flex gap-1.5">
-                <div className="w-5 h-5 rounded-full bg-gray-200" />
-                <div className="w-5 h-5 rounded-full bg-gray-400" />
-                <div className="w-5 h-5 rounded-full bg-gray-700" />
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-slate-500">Original</p>
+                <p className="text-xs text-slate-500">Grayscale</p>
               </div>
-              <span className="text-sm text-slate-400 font-medium ml-2">Color → Grayscale</span>
             </div>
-          </div>
+          ) : (
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-red-400" />
+                  <div className="w-5 h-5 rounded-full bg-green-400" />
+                  <div className="w-5 h-5 rounded-full bg-blue-400" />
+                </div>
+                <span className="text-slate-400 text-sm">→</span>
+                <div className="flex gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-slate-300" />
+                  <div className="w-5 h-5 rounded-full bg-slate-500" />
+                  <div className="w-5 h-5 rounded-full bg-slate-700" />
+                </div>
+                <span className="text-sm text-slate-400 font-medium ml-2">Color → Grayscale</span>
+              </div>
+            </div>
+          )}
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />
 
