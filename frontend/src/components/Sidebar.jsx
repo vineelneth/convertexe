@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, Image, Minimize2, Maximize2, RotateCw, Contrast,
-  X, Zap,
+  X, Zap, Unlock,
   ImagePlus, FilePlus2, Scissors, Trash2, PackageOpen, Lock, PenLine, FileImage
 } from 'lucide-react';
 
@@ -35,6 +35,7 @@ const navSections = [
       { to: '/pdf/protect',       label: 'Protect PDF',    icon: Lock },
       { to: '/pdf/watermark',     label: 'Watermark PDF',  icon: PenLine },
       { to: '/pdf/to-images',     label: 'PDF to Images',  icon: FileImage },
+      { to: '/pdf/unlock',        label: 'Unlock PDF',     icon: Unlock },
     ]
   }
 ];
@@ -50,7 +51,7 @@ export default function Sidebar({ onClose }) {
             <Zap size={16} className="text-white" />
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-            AllInOne
+            Convertexe
           </span>
         </div>
         <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-700 transition-colors">
@@ -86,7 +87,7 @@ export default function Sidebar({ onClose }) {
       </nav>
 
       <div className="px-5 py-4 border-t border-slate-700">
-        <p className="text-xs text-slate-500 text-center">All-In-One Converter v1.0</p>
+        <p className="text-xs text-slate-500 text-center">Convertexe</p>
       </div>
     </div>
   );

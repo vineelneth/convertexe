@@ -24,7 +24,7 @@ export default function ImageConverter() {
   const [format, setFormat] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState('');
-  const { startJob, reset: resetJob, status, progress, position, result } = useJobPoller();
+  const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
 
   const handleConvert = async () => {
     if (!file || !format) return;
@@ -54,7 +54,7 @@ export default function ImageConverter() {
     setFile(null); setFormat(''); setError(''); resetJob();
   };
 
-  const jobError = status === 'failed' ? (result?.error || 'Conversion failed') : '';
+  const jobError = status === 'failed' ? (hookError || 'Conversion failed') : '';
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
 
   return (
