@@ -18,9 +18,9 @@ export default function ImageGrayscale() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { startJob, reset: resetJob, status, progress, position, result } = useJobPoller();
+  const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
-  const jobError = status === 'failed' ? (result?.error || 'Operation failed') : '';
+  const jobError = status === 'failed' ? (hookError || 'Operation failed') : '';
 
   const handleConvert = async () => {
     if (!file) return;

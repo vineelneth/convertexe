@@ -80,7 +80,7 @@ export default function CompressPdf() {
 
           <div className="flex gap-2 bg-indigo-950/40 border border-indigo-800/60 rounded-lg px-4 py-3">
             <Info size={16} className="text-indigo-400 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-indigo-400">Removes unused objects and compresses PDF structure. Most effective on PDFs created by office tools or exported with large metadata.</p>
+            <p className="text-sm text-indigo-400">Removes unused objects and compresses PDF structure. Works best on PDFs with large metadata or redundant objects. PDFs that are already optimized or image-heavy may see little or no reduction.</p>
           </div>
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />

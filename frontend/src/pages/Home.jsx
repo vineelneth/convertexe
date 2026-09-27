@@ -55,7 +55,7 @@ const featureGroups = [
       { icon: Scissors,    title: 'Split PDF',         desc: 'Extract a specific set of pages from a PDF and save them as a separate file. Enter page numbers or ranges like 1-3, 5.',       to: '/pdf/split',         grad: 'from-orange-500 to-amber-500' },
       { icon: RotateCw,    title: 'Rotate PDF Pages',  desc: 'Fix the orientation of scanned or sideways pages. Rotate all pages or only the ones you choose by 90°, 180°, or 270°.',      to: '/pdf/rotate',        grad: 'from-red-400 to-orange-400' },
       { icon: Trash2,      title: 'Delete PDF Pages',  desc: 'Remove blank, duplicate, or unwanted pages from a PDF without re-creating the whole document from scratch.',                   to: '/pdf/delete-pages',  grad: 'from-rose-500 to-red-600' },
-      { icon: PackageOpen, title: 'Compress PDF',      desc: 'Reduce PDF file size by optimizing its internal structure and streams — ideal for emailing or uploading large documents.',     to: '/pdf/compress',      grad: 'from-orange-400 to-red-400' },
+      { icon: PackageOpen, title: 'Compress PDF',      desc: 'Reduce PDF file size by removing unused objects and compressing internal structure. Most effective on office-generated PDFs with large metadata.',     to: '/pdf/compress',      grad: 'from-orange-400 to-red-400' },
       { icon: Lock,        title: 'Protect PDF',       desc: 'Secure your PDF with a 256-bit AES password. Only people who know the password will be able to open the document.',            to: '/pdf/protect',       grad: 'from-red-600 to-rose-700' },
       { icon: PenLine,     title: 'Watermark PDF',     desc: 'Stamp a diagonal text watermark across every page of your PDF. Customize the text and opacity to suit your branding.',         to: '/pdf/watermark',     grad: 'from-amber-500 to-orange-600' },
       { icon: FileImage,   title: 'PDF to Images',     desc: 'Convert every page of a PDF into a high-resolution PNG image. Preview each page and download only the ones you need.',         to: '/pdf/to-images',     grad: 'from-red-400 to-rose-500' },
@@ -117,7 +117,7 @@ export default function Home() {
             All your image, audio, and PDF tools in one place — free, instant, and completely private.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 justify-items-center">
             {[
               { id: 'image-tools',   icon: Image,     label: 'Image Tools', grad: 'from-blue-500 to-cyan-500' },
               { id: 'audio-tools',   icon: Music,     label: 'Audio Tools', grad: 'from-violet-500 to-purple-500' },
@@ -127,7 +127,7 @@ export default function Home() {
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
+                className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
               >
                 <Icon size={16} /> {label}
               </button>
