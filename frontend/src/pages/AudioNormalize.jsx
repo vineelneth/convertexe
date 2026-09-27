@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Activity, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import JobStatus from '../components/JobStatus';
+import ErrorBanner from '../components/ErrorBanner';
 import { useJobPoller } from '../hooks/useJobPoller';
 
 const ALL_INPUT_EXTS = '.mp3,.wav,.aac,.flac,.ogg,.oga,.m4a,.m4b,.wma,.webm,.opus,.mp1,.mp2,.mpc,.amr,.awb,.3gp,.aiff,.alac,.au,.gsm,.tta,.voc,.vox,.wv,.ape,.ra,.rm,.raw,.rf64,.sln,.8svx';
@@ -61,7 +62,7 @@ export default function AudioNormalize() {
         <div><h1 className="text-2xl font-bold text-white">Normalize Audio</h1><p className="text-slate-400 text-sm">Balance loudness to a target LUFS level</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-xl px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card">

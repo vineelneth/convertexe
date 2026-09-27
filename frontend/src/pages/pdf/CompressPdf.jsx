@@ -3,6 +3,7 @@ import axios from 'axios';
 import { PackageOpen, Download, RefreshCw, CheckCircle, Info } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
+import ErrorBanner from '../../components/ErrorBanner';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
 function formatBytes(bytes) {
@@ -50,7 +51,7 @@ export default function CompressPdf() {
         <div><h1 className="text-2xl font-bold text-white">Compress PDF</h1><p className="text-slate-400 text-sm">Reduce PDF file size by optimizing structure</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card">

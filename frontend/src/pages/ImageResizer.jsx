@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Maximize2, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
 import JobStatus from '../components/JobStatus';
+import ErrorBanner from '../components/ErrorBanner';
 import { useJobPoller } from '../hooks/useJobPoller';
 
 function formatBytes(bytes) {
@@ -92,11 +93,7 @@ export default function ImageResizer() {
         </div>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
-          {error}
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       {result && status === 'completed' ? (
         <div className="card">
