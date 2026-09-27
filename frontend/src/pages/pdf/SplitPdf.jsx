@@ -6,7 +6,6 @@ import JobStatus from '../../components/JobStatus';
 import PreviewPane from '../../components/PreviewPane';
 import PreviewWorkspace from '../../components/PreviewWorkspace';
 import { useJobPoller } from '../../hooks/useJobPoller';
-import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
 import { useHighResPdfPage } from '../../hooks/useHighResPdfPage';
 
 function formatBytes(bytes) {
@@ -26,8 +25,7 @@ export default function SplitPdf() {
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Split failed') : '';
-  const { thumbnails, pageCount, loading: thumbLoading } = usePdfThumbnails(file);
-  const { dataUrl: previewUrl, loading: previewLoading } = useHighResPdfPage(file, selectedPage);
+  const { dataUrl: previewUrl, loading: previewLoading, pageCount } = useHighResPdfPage(file, selectedPage);
 
   // Auto-select page 1 when a new file is loaded
   useEffect(() => {
@@ -122,40 +120,6 @@ export default function SplitPdf() {
               supportedLabel="PDF files only"
             />
 
-            {file && (thumbnails.length > 0 || thumbLoading) && (
-              <div>
-                <p className="text-xs text-slate-500 mb-1.5">
-                  {thumbLoading ? 'Loading pages…' : `${pageCount} pages — click to preview`}
-                </p>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {thumbnails.map(({ pageNum, dataUrl }) => (
-                    <div
-                      key={pageNum}
-                      className="relative cursor-pointer group"
-                      onClick={() => setSelectedPage(pageNum)}
-                    >
-                      <img
-                        src={dataUrl}
-                        alt={`Page ${pageNum}`}
-                        className={`w-full rounded border-2 object-contain bg-slate-800 transition-all ${
-                          selectedPage === pageNum
-                            ? 'border-indigo-500'
-                            : 'border-slate-700 group-hover:border-slate-500 opacity-70 group-hover:opacity-100'
-                        }`}
-                      />
-                      <span className={`absolute bottom-0.5 right-0.5 text-[10px] px-1 rounded ${
-                        selectedPage === pageNum
-                          ? 'bg-indigo-900/90 text-indigo-300'
-                          : 'bg-slate-900/80 text-slate-400'
-                      }`}>
-                        {pageNum}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-1.5">Pages to extract</label>
               <input
@@ -165,7 +129,7 @@ export default function SplitPdf() {
                 placeholder="e.g. 1-3, 5, 7-9"
                 className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <p className="text-xs text-slate-500 mt-1">Click thumbnails to preview, then enter the pages to extract.</p>
+              <p className="text-xs text-slate-500 mt-1">Use the preview on the right to browse pages, then enter the pages to extract.</p>
             </div>
 
             <JobStatus status={status} progress={progress} position={position} error={jobError} />

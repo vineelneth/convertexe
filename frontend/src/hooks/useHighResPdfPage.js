@@ -4,6 +4,7 @@ import { getPdfDocument } from '../utils/pdfDocCache';
 export function useHighResPdfPage(file, pageNum, { width = 680 } = {}) {
   const [dataUrl, setDataUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [pageCount, setPageCount] = useState(0);
   // Per-file render cache: key `${pageNum}@${width}` → dataUrl
   const renderCache = useRef(new Map());
   const lastFile = useRef(null);
@@ -14,7 +15,7 @@ export function useHighResPdfPage(file, pageNum, { width = 680 } = {}) {
   }
 
   useEffect(() => {
-    if (!file || !pageNum) { setDataUrl(null); return; }
+    if (!file || !pageNum) { setDataUrl(null); setPageCount(0); return; }
 
     const key = `${pageNum}@${width}`;
     if (renderCache.current.has(key)) {
@@ -30,6 +31,7 @@ export function useHighResPdfPage(file, pageNum, { width = 680 } = {}) {
       try {
         const pdf = await getPdfDocument(file);
         if (cancelled) return;
+        setPageCount(pdf.numPages);
         const page = await pdf.getPage(pageNum);
         if (cancelled) return;
         const vp = page.getViewport({ scale: 1 });
@@ -53,5 +55,5 @@ export function useHighResPdfPage(file, pageNum, { width = 680 } = {}) {
     return () => { cancelled = true; };
   }, [file, pageNum, width]);
 
-  return { dataUrl, loading };
+  return { dataUrl, loading, pageCount };
 }

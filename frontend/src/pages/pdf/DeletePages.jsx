@@ -6,7 +6,6 @@ import JobStatus from '../../components/JobStatus';
 import PreviewPane from '../../components/PreviewPane';
 import PreviewWorkspace from '../../components/PreviewWorkspace';
 import { useJobPoller } from '../../hooks/useJobPoller';
-import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
 import { useHighResPdfPage } from '../../hooks/useHighResPdfPage';
 
 function formatBytes(bytes) {
@@ -19,33 +18,19 @@ function formatBytes(bytes) {
 export default function DeletePages() {
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState('');
-  const [selectedPages, setSelectedPages] = useState(new Set());
   const [previewPage, setPreviewPage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
-  const { thumbnails, pageCount, loading: thumbLoading } = usePdfThumbnails(file);
-  const { dataUrl: previewUrl, loading: previewLoading } = useHighResPdfPage(file, previewPage);
+  const { dataUrl: previewUrl, loading: previewLoading, pageCount } = useHighResPdfPage(file, previewPage);
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Delete pages failed') : '';
 
   useEffect(() => {
-    setSelectedPages(new Set());
+    setPages('');
     setPreviewPage(file ? 1 : null);
   }, [file]);
-
-  const togglePage = (pageNum) => {
-    // Clicking a thumbnail: (1) preview that page, (2) toggle its deletion state
-    setPreviewPage(pageNum);
-    setSelectedPages(prev => {
-      const next = new Set(prev);
-      next.has(pageNum) ? next.delete(pageNum) : next.add(pageNum);
-      const sorted = [...next].sort((a, b) => a - b);
-      setPages(sorted.join(', '));
-      return next;
-    });
-  };
 
   const handleDelete = async () => {
     if (!file || !pages.trim()) return;
@@ -67,13 +52,11 @@ export default function DeletePages() {
   };
 
   const handleReset = () => {
-    setFile(null); setPages(''); setSelectedPages(new Set());
-    setPreviewPage(null); setError(''); resetJob();
+    setFile(null); setPages(''); setPreviewPage(null); setError(''); resetJob();
   };
 
-  const isDeleted = previewPage && selectedPages.has(previewPage);
   const previewLabel = previewPage && pageCount
-    ? `Page ${previewPage} of ${pageCount}${isDeleted ? ' · marked for deletion' : ''}`
+    ? `Page ${previewPage} of ${pageCount}`
     : pageCount ? `${pageCount} pages` : undefined;
 
   return (
@@ -126,7 +109,7 @@ export default function DeletePages() {
               hasPrev={previewPage > 1}
               hasNext={previewPage < pageCount}
               placeholder="Upload a PDF to preview pages"
-              className={`h-[480px] lg:h-[560px] ${isDeleted ? 'ring-2 ring-red-700/40' : ''}`}
+              className="h-[480px] lg:h-[560px]"
             />
           }
         >
@@ -139,60 +122,6 @@ export default function DeletePages() {
               supportedLabel="PDF files only"
             />
 
-            {file && (thumbnails.length > 0 || thumbLoading) && (
-              <div>
-                <p className="text-xs text-slate-500 mb-1.5">
-                  {thumbLoading
-                    ? 'Loading pages…'
-                    : `${pageCount} pages — click to select pages to delete`}
-                </p>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {thumbnails.map(({ pageNum, dataUrl }) => {
-                    const marked = selectedPages.has(pageNum);
-                    const previewing = previewPage === pageNum;
-                    return (
-                      <div
-                        key={pageNum}
-                        className="relative cursor-pointer group"
-                        onClick={() => togglePage(pageNum)}
-                      >
-                        <img
-                          src={dataUrl}
-                          alt={`Page ${pageNum}`}
-                          className={`w-full rounded border-2 object-contain bg-slate-800 transition-all ${
-                            marked
-                              ? 'border-red-600 opacity-50'
-                              : previewing
-                              ? 'border-indigo-500'
-                              : 'border-slate-700 group-hover:border-slate-500 opacity-70 group-hover:opacity-100'
-                          }`}
-                        />
-                        {marked && (
-                          <div className="absolute inset-0 rounded bg-red-900/30 flex items-center justify-center pointer-events-none">
-                            <Trash2 size={12} className="text-red-400" />
-                          </div>
-                        )}
-                        <span className={`absolute bottom-0.5 right-0.5 text-[10px] px-1 rounded ${
-                          marked
-                            ? 'bg-red-900/80 text-red-300'
-                            : previewing
-                            ? 'bg-indigo-900/90 text-indigo-300'
-                            : 'bg-slate-900/80 text-slate-400'
-                        }`}>
-                          {pageNum}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {selectedPages.size > 0 && (
-                  <p className="text-xs text-red-400 mt-1.5">
-                    {selectedPages.size} page{selectedPages.size !== 1 ? 's' : ''} marked for deletion
-                  </p>
-                )}
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-semibold text-slate-300 mb-1.5">Pages to delete</label>
               <input
@@ -202,7 +131,7 @@ export default function DeletePages() {
                 placeholder="e.g. 2, 5, 8-10"
                 className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <p className="text-xs text-slate-500 mt-1">Click thumbnails to select pages, or type them manually. Use hyphens for ranges.</p>
+              <p className="text-xs text-slate-500 mt-1">Use the preview to browse pages. Separate page numbers with commas; use hyphens for ranges.</p>
             </div>
 
             <JobStatus status={status} progress={progress} position={position} error={jobError} />
