@@ -29,9 +29,9 @@ function SortableItem({ item, index, onRemove }) {
         <GripVertical size={18} />
       </div>
       {thumbnails[0] ? (
-        <img src={thumbnails[0].dataUrl} alt="p1" className="w-10 h-14 object-contain bg-slate-700 rounded flex-shrink-0" />
+        <img src={thumbnails[0].dataUrl} alt="p1" className="w-8 h-11 sm:w-10 sm:h-14 object-contain bg-slate-700 rounded flex-shrink-0" />
       ) : (
-        <div className="w-10 h-14 bg-slate-700 rounded flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-11 sm:w-10 sm:h-14 bg-slate-700 rounded flex items-center justify-center flex-shrink-0">
           <FileText size={16} className="text-slate-500" />
         </div>
       )}

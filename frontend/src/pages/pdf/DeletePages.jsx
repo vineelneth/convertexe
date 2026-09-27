@@ -94,10 +94,10 @@ export default function DeletePages() {
 
           {file && (thumbnails.length > 0 || thumbLoading) && (
             <div>
-              <p className="text-sm font-semibold text-slate-300 mb-2">
-                Pages {thumbLoading ? <span className="text-slate-500 font-normal">(loading...)</span> : <span className="text-slate-500 font-normal">({pageCount} total) — click to select pages to delete</span>}
+              <p className="text-xs text-slate-500 mb-1.5">
+                Pages {thumbLoading ? '(loading...)' : `(${pageCount} total) — click to select pages to delete`}
               </p>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-52 overflow-y-auto pr-1">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
                 {thumbnails.map(({ pageNum, dataUrl }) => {
                   const selected = selectedPages.has(pageNum);
                   return (
