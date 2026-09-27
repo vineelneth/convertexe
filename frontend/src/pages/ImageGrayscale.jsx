@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Contrast, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -56,7 +56,13 @@ export default function ImageGrayscale() {
     resetJob();
   };
 
-  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   return (
     <div className="max-w-2xl mx-auto">

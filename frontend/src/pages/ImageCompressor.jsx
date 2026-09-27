@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Minimize2, Download, RefreshCw, CheckCircle, Sliders, Target } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -22,13 +22,20 @@ export default function ImageCompressor() {
   const [targetUnit, setTargetUnit] = useState('KB');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
-  const { startJob, reset: resetJob, status, progress, position, result } = useJobPoller();
+  const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
 
-  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
   const targetSizeKB = targetSize ? (targetUnit === 'MB' ? parseFloat(targetSize) * 1024 : parseFloat(targetSize)) : null;
   const isValid = file && (mode === 'quality' || (targetSize && parseFloat(targetSize) > 0));
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
-  const jobError = status === 'failed' ? (result?.error || 'Compression failed') : '';
+  const jobError = status === 'failed' ? (hookError || 'Compression failed') : '';
   const savings = result ? Math.max(0, Math.round((1 - result.size / result.originalSize) * 100)) : 0;
 
   const handleCompress = async () => {
@@ -71,6 +78,22 @@ export default function ImageCompressor() {
             <div><p className="font-semibold text-slate-200">Compression complete!</p>
               <p className="text-sm text-slate-400">{savings > 0 ? `Reduced by ${savings}%` : 'File processed'}{result.qualityUsed != null ? ` · Quality: ${result.qualityUsed}%` : ''}</p></div>
           </div>
+          {previewUrl && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Before</p>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
+                  <img src={previewUrl} alt="Original" className="max-w-full max-h-full object-contain" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">After</p>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
+                  <img src={result.downloadUrl.replace('/api/download/', '/api/preview/')} alt="Compressed" className="max-w-full max-h-full object-contain" />
+                </div>
+              </div>
+            </div>
+          )}
           <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-3 gap-4">
             <div><p className="text-xs text-slate-400 mb-1">Original</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
             <div><p className="text-xs text-slate-400 mb-1">Compressed</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
@@ -85,30 +108,9 @@ export default function ImageCompressor() {
         <div className="card space-y-6">
           <FileDropzone file={file} onFileChange={setFile} accept=".jpg,.jpeg,.png,.webp,.avif" label="Drag & drop an image here" />
 
-          {file && (
-            <div>
-              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
-                  <img
-                    src={previewUrl}
-                    alt="Original"
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
-                <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col items-center justify-center h-28 sm:h-40 gap-1">
-                  <img
-                    src={previewUrl}
-                    alt="Compressed preview"
-                    className="max-w-full max-h-full object-contain"
-                    style={{ filter: `contrast(${Math.max(0.8, quality / 100)}) brightness(${0.95 + (quality / 2000)})` }}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <p className="text-xs text-slate-500">Original</p>
-                <p className="text-xs text-slate-500">Compressed</p>
-              </div>
+          {previewUrl && (
+            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center h-28 sm:h-40">
+              <img src={previewUrl} alt="Original" className="max-w-full max-h-full object-contain" />
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { RotateCw, Download, RefreshCw, CheckCircle, FlipHorizontal2 } from 'lucide-react';
 import FileDropzone from '../components/FileDropzone';
@@ -63,7 +63,13 @@ export default function ImageRotate() {
   };
 
   const canProcess = file && (angle !== 0 || flip !== '');
-  const previewUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  useEffect(() => {
+    if (!file) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -124,23 +130,6 @@ export default function ImageRotate() {
             label="Drag & drop an image here"
           />
 
-          {file && (
-            <div>
-              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
-              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center max-h-36 sm:max-h-48">
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="max-w-full max-h-36 sm:max-h-48 object-contain"
-                  style={{
-                    transform: `rotate(${angle}deg) ${flip === 'horizontal' ? 'scaleX(-1)' : flip === 'vertical' ? 'scaleY(-1)' : ''}`,
-                    transition: 'transform 0.3s ease',
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
           {/* Rotation */}
           <div>
             <p className="text-sm font-semibold text-slate-300 mb-3">Rotation:</p>
@@ -181,6 +170,23 @@ export default function ImageRotate() {
               ))}
             </div>
           </div>
+
+          {previewUrl && (
+            <div>
+              <p className="text-xs text-slate-500 mb-1.5">Preview</p>
+              <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center max-h-36 sm:max-h-48">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="max-w-full max-h-36 sm:max-h-48 object-contain"
+                  style={{
+                    transform: `rotate(${angle}deg) ${flip === 'horizontal' ? 'scaleX(-1)' : flip === 'vertical' ? 'scaleY(-1)' : ''}`,
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />
 
