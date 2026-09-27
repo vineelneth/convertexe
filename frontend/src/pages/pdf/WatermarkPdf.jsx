@@ -3,6 +3,7 @@ import axios from 'axios';
 import { PenLine, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
+import ErrorBanner from '../../components/ErrorBanner';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
 function formatBytes(bytes) {
@@ -52,7 +53,7 @@ export default function WatermarkPdf() {
         <div><h1 className="text-2xl font-bold text-white">Watermark PDF</h1><p className="text-slate-400 text-sm">Add a diagonal text watermark to every page</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card">
@@ -105,6 +106,24 @@ export default function WatermarkPdf() {
             />
             <div className="flex justify-between text-xs text-slate-500 mt-1"><span>Subtle (0.1)</span><span>Visible (0.5)</span></div>
           </div>
+
+          {text.trim() && (
+            <div className="space-y-1.5">
+              <p className="text-sm font-semibold text-slate-300">Preview</p>
+              <div className="relative bg-white rounded-lg overflow-hidden mx-auto" style={{ aspectRatio: '1/1.414', maxHeight: '220px' }}>
+                <div className="absolute inset-0 p-4 flex flex-col gap-2 justify-center">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="h-2 bg-gray-200 rounded" style={{ width: `${60 + (i % 3) * 15}%` }} />
+                  ))}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span style={{ transform: 'rotate(-45deg)', opacity, fontSize: 'clamp(14px, 4vw, 28px)', fontWeight: 700, color: '#374151', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    {text}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <JobStatus status={status} progress={progress} position={position} error={jobError} />
 

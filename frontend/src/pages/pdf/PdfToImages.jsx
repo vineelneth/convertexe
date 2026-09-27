@@ -3,6 +3,7 @@ import axios from 'axios';
 import { FileImage, Download, RefreshCw, CheckCircle, ZoomIn, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
+import ErrorBanner from '../../components/ErrorBanner';
 import { useJobPoller } from '../../hooks/useJobPoller';
 
 function Lightbox({ pages, initialIndex, onClose, onDownload }) {
@@ -123,7 +124,7 @@ export default function PdfToImages() {
         <div><h1 className="text-2xl font-bold text-white">PDF to Images</h1><p className="text-slate-400 text-sm">Convert each PDF page to a PNG image</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card">

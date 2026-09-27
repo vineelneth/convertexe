@@ -7,6 +7,7 @@ import {
 import FileDropzone from '../components/FileDropzone';
 import JobStatus from '../components/JobStatus';
 import PreviewWorkspace from '../components/PreviewWorkspace';
+import ErrorBanner from '../components/ErrorBanner';
 import { useJobPoller } from '../hooks/useJobPoller';
 
 function formatBytes(bytes) {
@@ -174,11 +175,7 @@ export default function ImageGrayscale() {
         </div>
       </div>
 
-      {(error || jobError) && (
-        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
-          {error || jobError}
-        </div>
-      )}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card max-w-lg">

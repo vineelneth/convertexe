@@ -7,6 +7,7 @@ import PreviewPane from '../../components/PreviewPane';
 import PreviewWorkspace from '../../components/PreviewWorkspace';
 import { useJobPoller } from '../../hooks/useJobPoller';
 import { useHighResPdfPage } from '../../hooks/useHighResPdfPage';
+import ErrorBanner from '../../components/ErrorBanner';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -71,11 +72,7 @@ export default function DeletePages() {
         </div>
       </div>
 
-      {(error || jobError) && (
-        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
-          {error || jobError}
-        </div>
-      )}
+      <ErrorBanner message={error || jobError} />
 
       {result && status === 'completed' ? (
         <div className="card max-w-lg">
