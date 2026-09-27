@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Scissors, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
+import PreviewPane from '../../components/PreviewPane';
+import PreviewWorkspace from '../../components/PreviewWorkspace';
 import { useJobPoller } from '../../hooks/useJobPoller';
+import { useHighResPdfPage } from '../../hooks/useHighResPdfPage';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -15,12 +18,19 @@ function formatBytes(bytes) {
 export default function SplitPdf() {
   const [file, setFile] = useState(null);
   const [pages, setPages] = useState('');
+  const [selectedPage, setSelectedPage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
 
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Split failed') : '';
+  const { dataUrl: previewUrl, loading: previewLoading, pageCount } = useHighResPdfPage(file, selectedPage);
+
+  // Auto-select page 1 when a new file is loaded
+  useEffect(() => {
+    setSelectedPage(file ? 1 : null);
+  }, [file]);
 
   const handleSplit = async () => {
     if (!file || !pages.trim()) return;
@@ -41,22 +51,40 @@ export default function SplitPdf() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  const handleReset = () => { setFile(null); setPages(''); setError(''); resetJob(); };
+  const handleReset = () => { setFile(null); setPages(''); setSelectedPage(null); setError(''); resetJob(); };
+
+  const previewLabel = selectedPage && pageCount
+    ? `Page ${selectedPage} of ${pageCount}`
+    : pageCount ? `${pageCount} pages` : undefined;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><Scissors size={20} className="text-rose-400" /></div>
-        <div><h1 className="text-2xl font-bold text-white">Split PDF</h1><p className="text-slate-400 text-sm">Extract specific pages from a PDF</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center">
+          <Scissors size={20} className="text-rose-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Split PDF</h1>
+          <p className="text-slate-400 text-sm">Extract specific pages from a PDF</p>
+        </div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && (
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error || jobError}
+        </div>
+      )}
 
       {result && status === 'completed' ? (
-        <div className="card">
+        <div className="card max-w-lg">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
-            <div><p className="font-semibold text-slate-200">Pages extracted!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-200">Pages extracted!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
+            </div>
           </div>
           <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
             <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
@@ -68,35 +96,55 @@ export default function SplitPdf() {
           </div>
         </div>
       ) : (
-        <div className="card space-y-5">
-          <FileDropzone
-            file={file}
-            onFileChange={setFile}
-            accept=".pdf"
-            label="Drag & drop a PDF here"
-            supportedLabel="PDF files only"
-          />
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">Pages to extract</label>
-            <input
-              type="text"
-              value={pages}
-              onChange={(e) => setPages(e.target.value)}
-              placeholder="e.g. 1-3, 5, 7-9"
-              className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        <PreviewWorkspace
+          preview={
+            <PreviewPane
+              src={previewUrl}
+              loading={previewLoading}
+              label={previewLabel}
+              onPrev={() => setSelectedPage(p => Math.max(1, p - 1))}
+              onNext={() => setSelectedPage(p => Math.min(pageCount, p + 1))}
+              hasPrev={selectedPage > 1}
+              hasNext={selectedPage < pageCount}
+              placeholder="Upload a PDF to preview pages"
+              className="h-[480px] lg:h-[560px]"
             />
-            <p className="text-xs text-slate-500 mt-1">Enter pages to extract. Separate with commas. Use hyphens for ranges.</p>
+          }
+        >
+          <div className="card space-y-5">
+            <FileDropzone
+              file={file}
+              onFileChange={setFile}
+              accept=".pdf"
+              label="Drag & drop a PDF here"
+              supportedLabel="PDF files only"
+            />
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Pages to extract</label>
+              <input
+                type="text"
+                value={pages}
+                onChange={(e) => setPages(e.target.value)}
+                placeholder="e.g. 1-3, 5, 7-9"
+                className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <p className="text-xs text-slate-500 mt-1">Use the preview on the right to browse pages, then enter the pages to extract.</p>
+            </div>
+
+            <JobStatus status={status} progress={progress} position={position} error={jobError} />
+
+            <button
+              onClick={handleSplit}
+              disabled={!file || !pages.trim() || isProcessing}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading ? <><RefreshCw size={16} className="animate-spin" /> Uploading…</>
+                : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing…</>
+                : <><Scissors size={16} /> Split PDF</>}
+            </button>
           </div>
-
-          <JobStatus status={status} progress={progress} position={position} error={jobError} />
-
-          <button onClick={handleSplit} disabled={!file || !pages.trim() || isProcessing} className="btn-primary w-full flex items-center justify-center gap-2">
-            {loading ? <><RefreshCw size={16} className="animate-spin" /> Uploading...</>
-              : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing...</>
-              : <><Scissors size={16} /> Split PDF</>}
-          </button>
-        </div>
+        </PreviewWorkspace>
       )}
     </div>
   );
