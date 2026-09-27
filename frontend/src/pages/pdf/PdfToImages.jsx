@@ -119,19 +119,19 @@ export default function PdfToImages() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center"><FileImage size={20} className="text-red-600" /></div>
-        <div><h1 className="text-2xl font-bold text-gray-900">PDF to Images</h1><p className="text-gray-500 text-sm">Convert each PDF page to a PNG image</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><FileImage size={20} className="text-rose-400" /></div>
+        <div><h1 className="text-2xl font-bold text-white">PDF to Images</h1><p className="text-slate-400 text-sm">Convert each PDF page to a PNG image</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
             <div>
-              <p className="font-semibold text-gray-800">Conversion complete!</p>
-              <p className="text-sm text-gray-500">{result.pageCount} page{result.pageCount !== 1 ? 's' : ''} extracted</p>
+              <p className="font-semibold text-slate-200">Conversion complete!</p>
+              <p className="text-sm text-slate-400">{result.pageCount} page{result.pageCount !== 1 ? 's' : ''} extracted</p>
             </div>
           </div>
 
@@ -143,9 +143,9 @@ export default function PdfToImages() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {result.pages.map((page, i) => (
-              <div key={page.page} className="group border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
+              <div key={page.page} className="group border border-slate-700 rounded-xl overflow-hidden bg-slate-800 shadow-sm hover:shadow-md transition-shadow">
                 <div
-                  className="relative aspect-[3/4] bg-gray-50 overflow-hidden cursor-zoom-in"
+                  className="relative aspect-[3/4] bg-slate-800 overflow-hidden cursor-zoom-in"
                   onClick={() => setLightboxIndex(i)}
                 >
                   <img
@@ -154,17 +154,17 @@ export default function PdfToImages() {
                     className="w-full h-full object-contain"
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
-                    <div className="bg-white/90 rounded-full p-2 shadow">
-                      <ZoomIn size={16} className="text-gray-700" />
+                    <div className="bg-slate-800/90 rounded-full p-2 shadow">
+                      <ZoomIn size={16} className="text-slate-200" />
                     </div>
                   </div>
                 </div>
                 <div className="px-2 py-1.5 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-600">Page {page.page}</span>
+                  <span className="text-xs font-semibold text-slate-400">Page {page.page}</span>
                   <button
                     onClick={() => handleDownloadOne(page)}
                     title="Download"
-                    className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-400 transition-colors"
                   >
                     <Download size={12} />
                   </button>

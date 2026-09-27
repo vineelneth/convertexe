@@ -18,13 +18,13 @@ const FADE_STEPS = [0, 0.5, 1, 1.5, 2, 3, 4, 5, 7, 10];
 
 function FadeSlider({ label, desc, value, onChange }) {
   return (
-    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+    <div className="bg-slate-800 rounded-xl p-4 border border-slate-800">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm font-semibold text-gray-800">{label}</p>
-          <p className="text-xs text-gray-400">{desc}</p>
+          <p className="text-sm font-semibold text-slate-200">{label}</p>
+          <p className="text-xs text-slate-500">{desc}</p>
         </div>
-        <span className={`text-sm font-bold px-3 py-1 rounded-lg ${value > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-400'}`}>
+        <span className={`text-sm font-bold px-3 py-1 rounded-lg ${value > 0 ? 'bg-indigo-950/60 text-indigo-300' : 'bg-slate-700 text-slate-500'}`}>
           {value === 0 ? 'Off' : `${value}s`}
         </span>
       </div>
@@ -37,7 +37,7 @@ function FadeSlider({ label, desc, value, onChange }) {
         onChange={(e) => onChange(FADE_STEPS[parseInt(e.target.value)])}
         className="w-full accent-indigo-600"
       />
-      <div className="flex justify-between text-xs text-gray-400 mt-1">
+      <div className="flex justify-between text-xs text-slate-500 mt-1">
         <span>Off</span><span>5s</span><span>10s</span>
       </div>
     </div>
@@ -81,25 +81,25 @@ export default function AudioFade() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600">
+        <div className="w-10 h-10 bg-purple-900/40 rounded-xl flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-400">
             <path d="M2 12h2l3-8 4 16 3-10 2 6h6" />
           </svg>
         </div>
-        <div><h1 className="text-2xl font-bold text-gray-900">Audio Fade</h1><p className="text-gray-500 text-sm">Add smooth fade-in and fade-out effects</p></div>
+        <div><h1 className="text-2xl font-bold text-white">Audio Fade</h1><p className="text-slate-400 text-sm">Add smooth fade-in and fade-out effects</p></div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-xl px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
 
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-green-600" /></div>
-            <div><p className="font-semibold text-gray-800">Fade applied!</p><p className="text-sm text-gray-500">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
+            <div><p className="font-semibold text-slate-200">Fade applied!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Output size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Output size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2"><Download size={16} /> Download</button>
@@ -127,7 +127,7 @@ export default function AudioFade() {
           />
 
           {fadeIn === 0 && fadeOut === 0 && (
-            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2">
+            <p className="text-xs text-amber-300 bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-2">
               Enable at least one fade effect above.
             </p>
           )}

@@ -122,6 +122,23 @@ router.post('/to-images', handleUpload(uploadPdf.single('file')), asyncRoute(asy
   res.json({ jobId: 'pdf_' + job.id });
 }));
 
+// Lightweight page count endpoint for DeletePages visual grid
+router.post('/page-count', handleUpload(uploadPdf.single('file')), asyncRoute(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const { PDFDocument } = require('pdf-lib');
+  const fs = require('fs');
+  try {
+    const bytes = fs.readFileSync(req.file.path);
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const pageCount = doc.getPageCount();
+    res.json({ pageCount });
+  } catch (err) {
+    res.status(400).json({ error: 'Could not read PDF page count' });
+  } finally {
+    fs.unlink(req.file.path, () => {});
+  }
+}));
+
 // Reliable server-side PDF encryption check (replaces unreliable browser-side heuristic)
 router.post('/check-encrypted', handleUpload(uploadPdf.single('file')), asyncRoute(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });

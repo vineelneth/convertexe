@@ -70,17 +70,17 @@ export default function UnlockPdf() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-          <Unlock size={20} className="text-green-600" />
+        <div className="w-10 h-10 bg-emerald-900/40 rounded-xl flex items-center justify-center">
+          <Unlock size={20} className="text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Unlock PDF</h1>
-          <p className="text-gray-500 text-sm">Remove password protection from a PDF</p>
+          <h1 className="text-2xl font-bold text-white">Unlock PDF</h1>
+          <p className="text-slate-400 text-sm">Remove password protection from a PDF</p>
         </div>
       </div>
 
       {(error || jobError) && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-xl px-4 py-3 mb-4 text-sm">
           {error || jobError}
         </div>
       )}
@@ -88,17 +88,17 @@ export default function UnlockPdf() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">PDF unlocked!</p>
-              <p className="text-sm text-gray-500">Password removed successfully</p>
+              <p className="font-semibold text-slate-200">PDF unlocked!</p>
+              <p className="text-sm text-slate-400">Password removed successfully</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Unlocked size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Unlocked size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
@@ -121,7 +121,7 @@ export default function UnlockPdf() {
 
           {/* Not encrypted warning */}
           {isEncrypted === false && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm font-medium">
+            <div className="bg-amber-950/40 border border-amber-800/60 text-amber-300 rounded-xl px-4 py-3 text-sm font-medium">
               This PDF is not password-protected — there is nothing to unlock.
             </div>
           )}
@@ -129,16 +129,16 @@ export default function UnlockPdf() {
           {/* Password field — only shown when file is confirmed encrypted */}
           {isEncrypted === true && (
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">PDF Password</label>
+              <label className="block text-sm font-semibold text-slate-300 mb-1.5">PDF Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
                 placeholder="Enter the current password"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <p className="text-xs text-gray-400 mt-1.5">The correct password is required to remove protection.</p>
+              <p className="text-xs text-slate-500 mt-1.5">The correct password is required to remove protection.</p>
             </div>
           )}
 

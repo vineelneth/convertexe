@@ -75,17 +75,17 @@ export default function ProtectPdf() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-          <Lock size={20} className="text-red-600" />
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center">
+          <Lock size={20} className="text-rose-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Protect PDF</h1>
-          <p className="text-gray-500 text-sm">Password-protect your PDF document</p>
+          <h1 className="text-2xl font-bold text-white">Protect PDF</h1>
+          <p className="text-slate-400 text-sm">Password-protect your PDF document</p>
         </div>
       </div>
 
       {(error || jobError) && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-xl px-4 py-3 mb-4 text-sm">
           {error || jobError}
         </div>
       )}
@@ -93,17 +93,17 @@ export default function ProtectPdf() {
       {result && status === 'completed' ? (
         <div className="card">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={20} className="text-green-600" />
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-800">PDF protected!</p>
-              <p className="text-sm text-gray-500">{result.filename}</p>
+              <p className="font-semibold text-slate-200">PDF protected!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
             </div>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
-            <div><p className="text-xs text-gray-500 mb-1">Original size</p><p className="font-semibold text-gray-700">{formatBytes(result.originalSize)}</p></div>
-            <div><p className="text-xs text-gray-500 mb-1">Protected size</p><p className="font-semibold text-green-700">{formatBytes(result.size)}</p></div>
+          <div className="bg-slate-800 rounded-xl p-4 mb-5 grid grid-cols-2 gap-4">
+            <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
+            <div><p className="text-xs text-slate-400 mb-1">Protected size</p><p className="font-semibold text-emerald-400">{formatBytes(result.size)}</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
@@ -126,11 +126,11 @@ export default function ProtectPdf() {
 
           {/* Already protected warning */}
           {isEncrypted === true && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+            <div className="bg-amber-950/40 border border-amber-800/60 rounded-xl px-4 py-3 text-sm text-amber-300">
               <p className="font-semibold mb-0.5">This PDF is already password-protected.</p>
-              <p className="text-amber-700">
+              <p className="text-amber-300">
                 First{' '}
-                <Link to="/pdf/unlock" className="underline font-semibold text-amber-800 hover:text-amber-900">
+                <Link to="/pdf/unlock" className="underline font-semibold text-amber-300 hover:text-amber-200">
                   remove the existing password
                 </Link>
                 , then come back here to set a new one.
@@ -142,25 +142,25 @@ export default function ProtectPdf() {
           {showPasswordFields && (
             <>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-1.5">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter a password"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-400 mt-1">256-bit AES encryption will be applied.</p>
+                <p className="text-xs text-slate-500 mt-1">256-bit AES encryption will be applied.</p>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm password</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-1.5">Confirm password</label>
                 <input
                   type="password"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Re-enter the password"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
             </>

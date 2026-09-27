@@ -55,7 +55,7 @@ const featureGroups = [
       { icon: Scissors,    title: 'Split PDF',         desc: 'Extract a specific set of pages from a PDF and save them as a separate file. Enter page numbers or ranges like 1-3, 5.',       to: '/pdf/split',         grad: 'from-orange-500 to-amber-500' },
       { icon: RotateCw,    title: 'Rotate PDF Pages',  desc: 'Fix the orientation of scanned or sideways pages. Rotate all pages or only the ones you choose by 90°, 180°, or 270°.',      to: '/pdf/rotate',        grad: 'from-red-400 to-orange-400' },
       { icon: Trash2,      title: 'Delete PDF Pages',  desc: 'Remove blank, duplicate, or unwanted pages from a PDF without re-creating the whole document from scratch.',                   to: '/pdf/delete-pages',  grad: 'from-rose-500 to-red-600' },
-      { icon: PackageOpen, title: 'Compress PDF',      desc: 'Reduce PDF file size by optimizing its internal structure and streams — ideal for emailing or uploading large documents.',     to: '/pdf/compress',      grad: 'from-orange-400 to-red-400' },
+      { icon: PackageOpen, title: 'Compress PDF',      desc: 'Reduce PDF file size by removing unused objects and compressing internal structure. Most effective on office-generated PDFs with large metadata.',     to: '/pdf/compress',      grad: 'from-orange-400 to-red-400' },
       { icon: Lock,        title: 'Protect PDF',       desc: 'Secure your PDF with a 256-bit AES password. Only people who know the password will be able to open the document.',            to: '/pdf/protect',       grad: 'from-red-600 to-rose-700' },
       { icon: PenLine,     title: 'Watermark PDF',     desc: 'Stamp a diagonal text watermark across every page of your PDF. Customize the text and opacity to suit your branding.',         to: '/pdf/watermark',     grad: 'from-amber-500 to-orange-600' },
       { icon: FileImage,   title: 'PDF to Images',     desc: 'Convert every page of a PDF into a high-resolution PNG image. Preview each page and download only the ones you need.',         to: '/pdf/to-images',     grad: 'from-red-400 to-rose-500' },
@@ -82,10 +82,10 @@ const stats = [
 const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
 const accentRing = {
-  blue:   'ring-blue-200 hover:ring-blue-400',
-  violet: 'ring-violet-200 hover:ring-violet-400',
-  rose:   'ring-rose-200 hover:ring-rose-400',
-  indigo: 'ring-indigo-200 hover:ring-indigo-400',
+  blue:   'ring-slate-800 hover:ring-blue-600/60',
+  violet: 'ring-slate-800 hover:ring-violet-600/60',
+  rose:   'ring-slate-800 hover:ring-rose-600/60',
+  indigo: 'ring-slate-800 hover:ring-indigo-600/60',
 };
 
 export default function Home() {
@@ -95,29 +95,29 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="relative text-center py-12 sm:py-20 overflow-hidden">
         {/* background blobs */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-900/20 rounded-full blur-3xl opacity-60 pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-900/20 rounded-full blur-3xl opacity-60 pointer-events-none" />
 
         <div className="relative">
-          <span className="inline-flex items-center gap-2 bg-white text-indigo-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 border border-indigo-200 shadow-sm tracking-wide uppercase">
+          <span className="inline-flex items-center gap-2 bg-slate-800/80 text-indigo-400 text-xs font-semibold px-4 py-1.5 rounded-full mb-8 border border-indigo-800/60 shadow-sm tracking-wide uppercase backdrop-blur-sm">
             <Zap size={12} /> Free · Fast · No account needed
           </span>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-5 leading-[1.1] tracking-tight">
-            <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-5 leading-[1.1] tracking-tight">
+            <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
               Convertexe
             </span>
           </h1>
 
-          <p className="text-xl font-semibold text-gray-700 mb-3 tracking-wide">
+          <p className="text-xl font-semibold text-slate-300 mb-3 tracking-wide">
             Files. Simplified.
           </p>
 
-          <p className="text-sm sm:text-base text-gray-500 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-400 max-w-xl mx-auto mb-8 sm:mb-10 leading-relaxed">
             All your image, audio, and PDF tools in one place — free, instant, and completely private.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 justify-items-center">
             {[
               { id: 'image-tools',   icon: Image,     label: 'Image Tools', grad: 'from-blue-500 to-cyan-500' },
               { id: 'audio-tools',   icon: Music,     label: 'Audio Tools', grad: 'from-violet-500 to-purple-500' },
@@ -127,7 +127,7 @@ export default function Home() {
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
+                className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r ${grad} text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-150`}
               >
                 <Icon size={16} /> {label}
               </button>
@@ -139,13 +139,13 @@ export default function Home() {
       {/* ── Stats ── */}
       <section className="grid grid-cols-3 gap-2 sm:gap-4 mb-12 sm:mb-16">
         {stats.map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-2 py-3 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-center gap-1 sm:gap-4 text-center sm:text-left">
-            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <s.icon size={16} className="text-indigo-600" />
+          <div key={i} className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm px-2 py-3 sm:px-6 sm:py-5 flex flex-col sm:flex-row items-center gap-1 sm:gap-4 text-center sm:text-left">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-indigo-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+              <s.icon size={16} className="text-indigo-400" />
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-xs sm:text-xl text-gray-900 leading-tight">{s.label}</p>
-              <p className="text-gray-500 text-xs mt-0.5 hidden sm:block">{s.sub}</p>
+              <p className="font-bold text-xs sm:text-xl text-white leading-tight">{s.label}</p>
+              <p className="text-slate-500 text-xs mt-0.5 hidden sm:block">{s.sub}</p>
             </div>
           </div>
         ))}
@@ -159,8 +159,8 @@ export default function Home() {
             {/* Group header */}
             <div className="flex items-center gap-3 mb-6">
               <div className={`h-8 w-1 rounded-full bg-gradient-to-b ${group.headerGrad}`} />
-              <h2 className="text-xl font-bold text-gray-800">{group.label}</h2>
-              <span className="text-sm text-gray-400 font-medium">{group.tools.length} tools</span>
+              <h2 className="text-xl font-bold text-white">{group.label}</h2>
+              <span className="text-sm text-slate-500 font-medium">{group.tools.length} tools</span>
             </div>
 
             {/* Tool cards */}
@@ -169,14 +169,14 @@ export default function Home() {
                 <Link
                   key={tool.to}
                   to={tool.to}
-                  className={`group bg-white rounded-2xl shadow-sm hover:shadow-md p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 no-underline transition-all duration-200 hover:-translate-y-1 ring-2 ${accentRing[group.accent]}`}
+                  className={`group bg-slate-900 rounded-2xl shadow-sm hover:shadow-lg p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 no-underline transition-all duration-200 hover:-translate-y-1 ring-1 ${accentRing[group.accent]}`}
                 >
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${tool.grad} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                     <tool.icon size={18} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors text-sm leading-snug">{tool.title}</h3>
-                    <p className="text-gray-400 text-xs mt-1.5 leading-relaxed">{tool.desc}</p>
+                    <h3 className="font-bold text-slate-200 group-hover:text-indigo-400 transition-colors text-sm leading-snug">{tool.title}</h3>
+                    <p className="text-slate-500 text-xs mt-1.5 leading-relaxed">{tool.desc}</p>
                   </div>
                 </Link>
               ))}
