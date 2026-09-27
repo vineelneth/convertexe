@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
+import { getPdfDocument } from '../utils/pdfDocCache';
 
 export function usePdfThumbnails(file, { maxPages = 20, width = 120 } = {}) {
   const [thumbnails, setThumbnails] = useState([]);
@@ -15,8 +14,7 @@ export function usePdfThumbnails(file, { maxPages = 20, width = 120 } = {}) {
 
     (async () => {
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pdf = await getPdfDocument(file);
         if (cancelled) return;
         const count = Math.min(pdf.numPages, maxPages);
         setPageCount(pdf.numPages);
@@ -42,7 +40,7 @@ export function usePdfThumbnails(file, { maxPages = 20, width = 120 } = {}) {
     })();
 
     return () => { cancelled = true; };
-  }, [file]);
+  }, [file, maxPages, width]);
 
   return { thumbnails, pageCount, loading };
 }

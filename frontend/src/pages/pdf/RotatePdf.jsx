@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { RotateCw, Download, RefreshCw, CheckCircle } from 'lucide-react';
 import FileDropzone from '../../components/FileDropzone';
 import JobStatus from '../../components/JobStatus';
+import PreviewPane from '../../components/PreviewPane';
+import PreviewWorkspace from '../../components/PreviewWorkspace';
 import { useJobPoller } from '../../hooks/useJobPoller';
 import { usePdfThumbnails } from '../../hooks/usePdfThumbnails';
+import { useHighResPdfPage } from '../../hooks/useHighResPdfPage';
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B';
@@ -13,11 +16,28 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Parse a page-range string (e.g. "1, 3-5, 7") into a Set of page numbers
+function parsePageSet(str, maxPage) {
+  const set = new Set();
+  str.split(',').forEach(part => {
+    const t = part.trim();
+    const range = t.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (range) {
+      for (let n = parseInt(range[1]); n <= Math.min(parseInt(range[2]), maxPage); n++) set.add(n);
+    } else {
+      const n = parseInt(t);
+      if (!isNaN(n) && n >= 1 && n <= maxPage) set.add(n);
+    }
+  });
+  return set;
+}
+
 export default function RotatePdf() {
   const [file, setFile] = useState(null);
   const [angle, setAngle] = useState(90);
   const [pageMode, setPageMode] = useState('all');
   const [pageNumbers, setPageNumbers] = useState('');
+  const [previewPage, setPreviewPage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { startJob, reset: resetJob, status, progress, position, result, error: hookError } = useJobPoller();
@@ -25,6 +45,22 @@ export default function RotatePdf() {
   const isProcessing = loading || (status && status !== 'completed' && status !== 'failed');
   const jobError = status === 'failed' ? (hookError || 'Rotation failed') : '';
   const { thumbnails, pageCount, loading: thumbLoading } = usePdfThumbnails(file);
+  const { dataUrl: previewUrl, loading: previewLoading } = useHighResPdfPage(file, previewPage);
+
+  useEffect(() => {
+    setPreviewPage(file ? 1 : null);
+  }, [file]);
+
+  // Determine the effective rotation for the currently-previewed page
+  const specificPages = pageMode === 'specific' && pageNumbers.trim()
+    ? parsePageSet(pageNumbers, pageCount)
+    : null;
+  const previewRotation =
+    pageMode === 'all'
+      ? angle
+      : specificPages && previewPage && specificPages.has(previewPage)
+      ? angle
+      : 0;
 
   const handleRotate = async () => {
     if (!file) return;
@@ -47,22 +83,44 @@ export default function RotatePdf() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  const handleReset = () => { setFile(null); setAngle(90); setPageMode('all'); setPageNumbers(''); setError(''); resetJob(); };
+  const handleReset = () => {
+    setFile(null); setAngle(90); setPageMode('all'); setPageNumbers('');
+    setPreviewPage(null); setError(''); resetJob();
+  };
+
+  const rotationIndicator = previewRotation ? ` · ${previewRotation}° rotation` : '';
+  const previewLabel = previewPage && pageCount
+    ? `Page ${previewPage} of ${pageCount}${rotationIndicator}`
+    : pageCount ? `${pageCount} pages` : undefined;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center"><RotateCw size={20} className="text-rose-400" /></div>
-        <div><h1 className="text-2xl font-bold text-white">Rotate Pages</h1><p className="text-slate-400 text-sm">Rotate PDF pages to the correct orientation</p></div>
+        <div className="w-10 h-10 bg-red-900/40 rounded-xl flex items-center justify-center">
+          <RotateCw size={20} className="text-rose-400" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Rotate Pages</h1>
+          <p className="text-slate-400 text-sm">Rotate PDF pages to the correct orientation</p>
+        </div>
       </div>
 
-      {(error || jobError) && <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">{error || jobError}</div>}
+      {(error || jobError) && (
+        <div className="bg-red-950/40 border border-red-900/60 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
+          {error || jobError}
+        </div>
+      )}
 
       {result && status === 'completed' ? (
-        <div className="card">
+        <div className="card max-w-lg">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center"><CheckCircle size={20} className="text-emerald-400" /></div>
-            <div><p className="font-semibold text-slate-200">Pages rotated!</p><p className="text-sm text-slate-400">{result.filename}</p></div>
+            <div className="w-10 h-10 bg-emerald-900/40 rounded-full flex items-center justify-center">
+              <CheckCircle size={20} className="text-emerald-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-200">Pages rotated!</p>
+              <p className="text-sm text-slate-400">{result.filename}</p>
+            </div>
           </div>
           <div className="bg-slate-800 rounded-lg p-4 mb-5 grid grid-cols-2 gap-4">
             <div><p className="text-xs text-slate-400 mb-1">Original size</p><p className="font-semibold text-slate-200">{formatBytes(result.originalSize)}</p></div>
@@ -74,82 +132,128 @@ export default function RotatePdf() {
           </div>
         </div>
       ) : (
-        <div className="card space-y-5">
-          <FileDropzone
-            file={file}
-            onFileChange={setFile}
-            accept=".pdf"
-            label="Drag & drop a PDF here"
-            supportedLabel="PDF files only"
-          />
+        <PreviewWorkspace
+          preview={
+            <PreviewPane
+              src={previewUrl}
+              rotation={previewRotation}
+              loading={previewLoading}
+              label={previewLabel}
+              onPrev={() => setPreviewPage(p => Math.max(1, p - 1))}
+              onNext={() => setPreviewPage(p => Math.min(pageCount, p + 1))}
+              hasPrev={previewPage > 1}
+              hasNext={previewPage < pageCount}
+              placeholder="Upload a PDF to preview pages"
+              className="h-[480px] lg:h-[560px]"
+            />
+          }
+        >
+          <div className="card space-y-5">
+            <FileDropzone
+              file={file}
+              onFileChange={setFile}
+              accept=".pdf"
+              label="Drag & drop a PDF here"
+              supportedLabel="PDF files only"
+            />
 
-          {file && (thumbnails.length > 0 || thumbLoading) && (
+            {file && (thumbnails.length > 0 || thumbLoading) && (
+              <div>
+                <p className="text-xs text-slate-500 mb-1.5">
+                  {thumbLoading ? 'Loading pages…' : `${pageCount} pages — click to preview`}
+                </p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {thumbnails.map(({ pageNum, dataUrl }) => {
+                    const willRotate = pageMode === 'all'
+                      ? true
+                      : specificPages?.has(pageNum);
+                    return (
+                      <div
+                        key={pageNum}
+                        className="relative cursor-pointer group"
+                        onClick={() => setPreviewPage(pageNum)}
+                      >
+                        <img
+                          src={dataUrl}
+                          alt={`Page ${pageNum}`}
+                          className={`w-full rounded border-2 object-contain bg-slate-800 transition-all ${
+                            previewPage === pageNum
+                              ? 'border-indigo-500'
+                              : 'border-slate-700 group-hover:border-slate-500 opacity-70 group-hover:opacity-100'
+                          }`}
+                          style={willRotate && angle ? { transform: `rotate(${angle}deg)`, transition: 'transform 0.15s ease' } : undefined}
+                        />
+                        <span className={`absolute bottom-0.5 right-0.5 text-[10px] px-1 rounded ${
+                          previewPage === pageNum
+                            ? 'bg-indigo-900/90 text-indigo-300'
+                            : 'bg-slate-900/80 text-slate-400'
+                        }`}>
+                          {pageNum}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div>
-              <p className="text-xs text-slate-500 mb-1.5">
-                Pages {thumbLoading ? '(loading...)' : `(${pageCount} total)`}
-              </p>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
-                {thumbnails.map(({ pageNum, dataUrl }) => (
-                  <div key={pageNum} className="relative">
-                    <img src={dataUrl} alt={`Page ${pageNum}`} className="w-full rounded border border-slate-700 object-contain bg-slate-800" />
-                    <span className="absolute bottom-0.5 right-0.5 text-[10px] bg-slate-900/80 text-slate-300 px-1 rounded">{pageNum}</span>
-                  </div>
+              <p className="text-sm font-semibold text-slate-300 mb-2">Rotation angle</p>
+              <div className="flex gap-2">
+                {[90, 180, 270].map(a => (
+                  <button
+                    key={a}
+                    onClick={() => setAngle(a)}
+                    className={`format-btn ${angle === a ? 'format-btn-active' : 'format-btn-inactive'}`}
+                  >
+                    {a}°
+                  </button>
                 ))}
               </div>
             </div>
-          )}
 
-          <div>
-            <p className="text-sm font-semibold text-slate-300 mb-2">Rotation angle</p>
-            <div className="flex gap-2">
-              {[90, 180, 270].map(a => (
-                <button
-                  key={a}
-                  onClick={() => setAngle(a)}
-                  className={`format-btn ${angle === a ? 'format-btn-active' : 'format-btn-inactive'}`}
-                >
-                  {a}°
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-slate-300 mb-2">Apply to</p>
-            <div className="flex gap-2">
-              {[{ value: 'all', label: 'All pages' }, { value: 'specific', label: 'Specific pages' }].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setPageMode(opt.value)}
-                  className={`format-btn ${pageMode === opt.value ? 'format-btn-active' : 'format-btn-inactive'}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {pageMode === 'specific' && (
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1.5">Page numbers</label>
-              <input
-                type="text"
-                value={pageNumbers}
-                onChange={(e) => setPageNumbers(e.target.value)}
-                placeholder="e.g. 1, 3, 5-7"
-                className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              <p className="text-sm font-semibold text-slate-300 mb-2">Apply to</p>
+              <div className="flex gap-2">
+                {[{ value: 'all', label: 'All pages' }, { value: 'specific', label: 'Specific pages' }].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setPageMode(opt.value)}
+                    className={`format-btn ${pageMode === opt.value ? 'format-btn-active' : 'format-btn-inactive'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
 
-          <JobStatus status={status} progress={progress} position={position} error={jobError} />
+            {pageMode === 'specific' && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-1.5">Page numbers</label>
+                <input
+                  type="text"
+                  value={pageNumbers}
+                  onChange={(e) => setPageNumbers(e.target.value)}
+                  placeholder="e.g. 1, 3, 5-7"
+                  className="w-full border border-slate-700 bg-slate-800 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <p className="text-xs text-slate-500 mt-1">The preview will update to show the rotation for each selected page.</p>
+              </div>
+            )}
 
-          <button onClick={handleRotate} disabled={!file || isProcessing} className="btn-primary w-full flex items-center justify-center gap-2">
-            {loading ? <><RefreshCw size={16} className="animate-spin" /> Uploading...</>
-              : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing...</>
-              : <><RotateCw size={16} /> Rotate PDF</>}
-          </button>
-        </div>
+            <JobStatus status={status} progress={progress} position={position} error={jobError} />
+
+            <button
+              onClick={handleRotate}
+              disabled={!file || isProcessing}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading ? <><RefreshCw size={16} className="animate-spin" /> Uploading…</>
+                : isProcessing ? <><RefreshCw size={16} className="animate-spin" /> Processing…</>
+                : <><RotateCw size={16} /> Rotate PDF</>}
+            </button>
+          </div>
+        </PreviewWorkspace>
       )}
     </div>
   );
